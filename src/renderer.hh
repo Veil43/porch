@@ -9,6 +9,7 @@
 enum class eTargetOption : u8 {
     kScreen,
     kImageFile,
+    kScreenAndFile,
 };
 
 struct RendererConfig {

@@ -1,3 +1,5 @@
+// window.cc
+// by Reuel Nkomo 2025
 #include "window.hh"
 #include "types.hh"
 #include "utils.hh"
@@ -12,9 +14,9 @@
 #include <chrono>
 #include <thread>
 
-// ----------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Helper functions
-// ----------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 static void frame_buffer_resize_callback(GLFWwindow* window, int width, int height) {
     GL_QUERY_ERROR(glViewport(0, 0, width, height);)
 }
@@ -103,10 +105,6 @@ static void pause_thread(f64 s) {
     std::this_thread::sleep_for(std::chrono::duration<f64>(s));
 }
 
-static DECL_WINDOW_RENDER_CALLBACK(default_window_render_callback) {
-    return {};
-}
-
 static void setup_opengl_draw_surface(u32* vao, u32* vbo, u32* ebo) {
     const f32 vertices[] = {
         -1.0, -1.0, 0.0, 0.0,   // bottom left
@@ -139,9 +137,13 @@ static void setup_opengl_draw_surface(u32* vao, u32* vbo, u32* ebo) {
     GL_QUERY_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);)
 }
 
-// ----------------------------------------------------------------------------------------------
+static DECL_WINDOW_RENDER_CALLBACK(default_window_render_callback) {
+    return {};
+}
+
+// -------------------------------------------------------------------------------------------------
 // class Window implementation
-// ----------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 Window::Window(
     __window_render_callback_type__* render_callback, 
     f32 width, f32 aspect_ratio, const std::string& name
@@ -260,7 +262,6 @@ void Window::launch_window_loop() {
         }
         last_time = glfwGetTime();
     }
-
     GL_QUERY_ERROR(glDeleteProgram(m_shader);)
 }
 
@@ -270,3 +271,6 @@ Window::~Window() {
         glfwTerminate();
     }
 }
+// -------------------------------------------------------------------------------------------------
+// class Window end
+// -------------------------------------------------------------------------------------------------
