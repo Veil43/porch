@@ -19,7 +19,7 @@ void initialize_renderer(RendererConfig config) {
     GLOBAL_s_window_ptr = new Window(__window_render_callback, config.image_width, config.image_aspect_ratio, config.image_name);
 }
 
-void destroy_renderer() {
+void clean_up_renderer() {
     delete GLOBAL_s_window_ptr;
     GLOBAL_s_window_ptr = nullptr;
 }
