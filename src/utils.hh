@@ -1,15 +1,15 @@
-#ifndef UITLS_HPP
-#define UITLS_HPP
+#ifndef UITLS_HH
+#define UITLS_HH
 
-#include "types.hpp"
+#include "types.hh"
 #include <string>
 
 #ifdef PORCH_DEBUG
 #include <iostream>
-#ifdef _WIN32
+#ifdef _MSC_VER
     #define _DEBUG_BREAK __debugbreak();
 #else
-    #define _DEBUG_BREAK
+    #define _DEBUG_BREAK __builtin_trap();
 #endif
 
 #define GL_QUERY_ERROR(glFunction)                                                          \
@@ -20,12 +20,12 @@
         _DEBUG_BREAK                                                                        \
     }
 
-#define MOLLY_ASSERT(expr) \
-    if (!expr) {*(int *)0 = 0;}
+#define ASSERT(expr) \
+    if (!(expr)) {_DEBUG_BREAK}
 #else
 #define GL_QUERY_ERROR(glFunction) \
     glFunction
-#define MOLLY_ASSERT(expr)
+#define ASSERT(expr)
 #endif // PORCH_DEBUG
 
 namespace utils 
@@ -37,10 +37,10 @@ struct ImageData {
     i32 channel_count;
 };
 
-ImageData load_image_data(const std::string& path, u32 n_channels = 0, bool should_flip = true);
+ImageData load_image_from_file(const std::string& path, u32 n_channels = 0, bool should_flip = true);
 void free_image_data(ImageData* image);
 std::string load_text_from_file(const std::string& path);
 
 } // namespace utils
 
-#endif // UITLS_HPP
+#endif // UITLS_HH

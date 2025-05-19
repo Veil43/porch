@@ -9,7 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(porch src/main.cc
     third-party/glad/src/glad.c
     src/window.cc
-    src/utils.cc)
+    src/utils.cc
+    src/renderer.cc)
 
 # Add third-parties here
 add_subdirectory(third-party/glfw)

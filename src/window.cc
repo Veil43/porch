@@ -1,6 +1,6 @@
-#include "window.hpp"
-#include "types.hpp"
-#include "utils.hpp"
+#include "window.hh"
+#include "types.hh"
+#include "utils.hh"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -9,6 +9,8 @@
 
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <thread>
 
 // ----------------------------------------------------------------------------------------------
 // Helper functions
@@ -69,20 +71,93 @@ static u32 create_shader(const std::string& vpath, const std::string& fpath) {
     return shader;
 }
 
+static u32 load_image_to_gpu(utils::ImageData image, u32 shader, u32 texture_unit, const char* uniform) {
+    u32 id;
+    GL_QUERY_ERROR(glGenTextures(1, &id);)
+    GL_QUERY_ERROR(glBindTexture(GL_TEXTURE_2D, id);)
+
+    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);)
+    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);)
+    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);)
+    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);)
+
+    u32 internal_format = (image.channel_count == 3) ? GL_RGB8 : GL_RGBA8;
+
+    if (image.data != nullptr) {
+        GL_QUERY_ERROR(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, (void*)image.data);)
+        GL_QUERY_ERROR(glGenerateMipmap(GL_TEXTURE_2D);)
+    }
+
+    GL_QUERY_ERROR(glActiveTexture(GL_TEXTURE0 + texture_unit);)
+    GL_QUERY_ERROR(glBindTexture(GL_TEXTURE_2D, id);)
+
+    // Set uniform in shader
+    GL_QUERY_ERROR(glUseProgram(shader);)
+    GL_QUERY_ERROR(u32 sampler_location = glGetUniformLocation(shader, uniform);)
+    GL_QUERY_ERROR(glUniform1i(sampler_location, texture_unit);)
+    GL_QUERY_ERROR(glUseProgram(0);)
+    return id;
+}
+
+static void pause_thread(f64 s) {
+    std::this_thread::sleep_for(std::chrono::duration<f64>(s));
+}
+
+static DECL_WINDOW_RENDER_CALLBACK(default_window_render_callback) {
+    return {};
+}
+
+static void setup_opengl_draw_surface(u32* vao, u32* vbo, u32* ebo) {
+    const f32 vertices[] = {
+        -1.0, -1.0, 0.0, 0.0,   // bottom left
+         1.0, -1.0, 1.0, 0.0,   // bottom right
+         1.0,  1.0, 1.0, 1.0, // top right
+        -1.0, 1.0, 0.0, 1.0 // top left
+    };
+
+    const u32 indices[] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    GL_QUERY_ERROR(glGenVertexArrays(1, vao);)
+    GL_QUERY_ERROR(glBindVertexArray(*vao);)
+
+    GL_QUERY_ERROR(glGenBuffers(1, vbo);)
+    GL_QUERY_ERROR(glBindBuffer(GL_ARRAY_BUFFER, *vbo);)
+    GL_QUERY_ERROR(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);)
+    GL_QUERY_ERROR(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)0);)
+    GL_QUERY_ERROR(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)(2*sizeof(f32)));)
+    GL_QUERY_ERROR(glEnableVertexAttribArray(0);)
+    GL_QUERY_ERROR(glEnableVertexAttribArray(1);)
+    GL_QUERY_ERROR(glGenBuffers(1, ebo);)
+    GL_QUERY_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *ebo);)
+    GL_QUERY_ERROR(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);)
+
+    GL_QUERY_ERROR(glBindVertexArray(0);)
+    GL_QUERY_ERROR(glBindBuffer(GL_ARRAY_BUFFER, 0);)
+    GL_QUERY_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);)
+}
+
 // ----------------------------------------------------------------------------------------------
 // class Window implementation
 // ----------------------------------------------------------------------------------------------
-Window::Window(f32 width, f32 aspect_ratio, const std::string& name) 
-    : m_width{width}, m_aspect_ratio{aspect_ratio}, m_name{name}
+Window::Window(
+    __window_render_callback_type__* render_callback, 
+    f32 width, f32 aspect_ratio, const std::string& name
+) 
+    : m_width{width}, m_aspect_ratio{aspect_ratio}, m_name{name},
+      m_render_callback{render_callback}
 {
-    bool result = this->create_opengl_window();
-    if (!result) {
-        std::cerr << "Error: failed to create a window!\n";
+    if (render_callback == nullptr) {
+        std::cerr << "Warning: window not provided with valid callback!\n";
+        m_render_callback = default_window_render_callback;
+    } else {
+        m_render_callback = render_callback;
     }
 }
 
 bool Window::create_opengl_window() {
-
     if (!glfwInit()) {
         std::cerr << "Error::GLFW: could not initialize glfw!\n";
         return false;
@@ -94,21 +169,22 @@ bool Window::create_opengl_window() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif 
+    glfwWindowHint(GLFW_RESIZABLE, DEFAULT_WINDOW_RESIZE);
 
-    f32 height = this->m_width / this->m_aspect_ratio;
+    f32 height = m_width / m_aspect_ratio;
     GLFWwindow* window = glfwCreateWindow(
-        static_cast<i32>(this->m_width), 
+        static_cast<i32>(m_width), 
         static_cast<i32>(height), 
-        this->m_name.c_str(), 
+        m_name.c_str(), 
         NULL, NULL);
     
     if (window == nullptr) {
         std::cerr << "Error::GLFW: could not create a window!\n";
-        this->m_window_handle = nullptr;
+        m_window_handle = nullptr;
         glfwTerminate();
         return false;
-    }
-    this->m_window_handle = (void*) window;
+    }   
+    m_window_handle = (void*) window;
     glfwMakeContextCurrent(window);
 
     if (!gladLoadGL()) {
@@ -117,6 +193,7 @@ bool Window::create_opengl_window() {
             std::cerr << "Error::GLAD: could not load glfw loader!\n";
             glfwDestroyWindow(window);
             glfwTerminate();
+            m_window_handle = nullptr;
             return false;
         }
     }
@@ -126,99 +203,70 @@ bool Window::create_opengl_window() {
 }
 
 void Window::launch_window_loop() {
-    if (!this->m_window_handle) {
+    if (!m_window_handle) {
         std::cerr << "Error: cannot launch a window with failed initialization\n";
         return;
     }
-    f32 vertices[] = {
-        -1.0, -1.0, 0.0, 0.0,   // bottom left
-         1.0, -1.0, 1.0, 0.0,   // bottom right
-         1.0,  1.0, 1.0, 1.0, // top right
-        -1.0, 1.0, 0.0, 1.0 // top left
-    };
-
-    u32 indices[] = {
-        0, 1, 2,
-        2, 3, 0
-    };
-    
     // -----------------------------
     // Bind vertex data for canvas
     // -----------------------------
-
-    GL_QUERY_ERROR(glGenVertexArrays(1, &this->m_vao);)
-    GL_QUERY_ERROR(glBindVertexArray(this->m_vao);)
-
-    GL_QUERY_ERROR(glGenBuffers(1, &this->m_vbo);)
-    GL_QUERY_ERROR(glBindBuffer(GL_ARRAY_BUFFER, this->m_vbo);)
-    GL_QUERY_ERROR(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);)
-    GL_QUERY_ERROR(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)0);)
-    GL_QUERY_ERROR(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)(2*sizeof(f32)));)
-    GL_QUERY_ERROR(glEnableVertexAttribArray(0);)
-    GL_QUERY_ERROR(glEnableVertexAttribArray(1);)
-    GL_QUERY_ERROR(glGenBuffers(1, &this->m_ebo);)
-    GL_QUERY_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->m_ebo);)
-    GL_QUERY_ERROR(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);)
-
-    // GL_QUERY_ERROR(glBindVertexArray(0);)
+    setup_opengl_draw_surface(&m_vao, &m_vbo, &m_ebo);
 
     // -----------------------------
     // Create a shader
     // -----------------------------
-    this->m_shader = create_shader("../resources/window.vertex", "../resources/window.fragment");
+    m_shader = create_shader("../resources/window.vertex", "../resources/window.fragment");
     
-    // -----------------------------
-    // Load a texture
-    // -----------------------------
-    utils::ImageData test_texture = utils::load_image_data("../resources/sample.ppm");
-
-    GL_QUERY_ERROR(glGenTextures(1, &this->m_texture_id);)
-    GL_QUERY_ERROR(glBindTexture(GL_TEXTURE_2D, this->m_texture_id);)
-
-    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);)
-    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);)
-    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);)
-    GL_QUERY_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);)
-
-    u32 internal_format = (test_texture.channel_count == 3) ? GL_RGB8 : GL_RGBA8;
-
-    if (test_texture.data != nullptr) {
-        GL_QUERY_ERROR(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, test_texture.width, test_texture.height, 0, GL_RGB, GL_UNSIGNED_BYTE, (void*)test_texture.data);)
-        GL_QUERY_ERROR(glGenerateMipmap(GL_TEXTURE_2D);)
-    }
-
-    GL_QUERY_ERROR(glActiveTexture(GL_TEXTURE0);)
-    GL_QUERY_ERROR(glBindTexture(GL_TEXTURE_2D, this->m_texture_id);)
-
-    // Set uniform in shader
-    GL_QUERY_ERROR(glUseProgram(this->m_shader);)
-    GL_QUERY_ERROR(u32 sampler_location = glGetUniformLocation(this->m_shader, "frame_buffer");)
-    GL_QUERY_ERROR(glUniform1i(sampler_location, 0);)
-    GL_QUERY_ERROR(glUseProgram(0);)
-
     // -----------------------------
     // Render loop
     // -----------------------------
-    GLFWwindow* window = (GLFWwindow*) this->m_window_handle;
+    f64 last_time = glfwGetTime();
+    GLFWwindow* window = (GLFWwindow*) m_window_handle;
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         process_input(window);
 
+        // ------------------------------------------------
+        // Request image from owner else load default image
+        // ------------------------------------------------
+        m_surface = m_render_callback();
+        if (m_surface.data == nullptr) {
+            m_surface = utils::load_image_from_file("../resources/sample.ppm");
+        } 
+        m_texture_id = load_image_to_gpu(m_surface, m_shader, 1, "canvas");
+        free_image_data(&m_surface);
+
         GL_QUERY_ERROR(glClearColor(0.0, 0.0, 0.0, 1.0);)
         GL_QUERY_ERROR(glClear(GL_COLOR_BUFFER_BIT);)
 
-        GL_QUERY_ERROR(glUseProgram(this->m_shader);)
-        GL_QUERY_ERROR(glBindVertexArray(this->m_vao);)
+        GL_QUERY_ERROR(glUseProgram(m_shader);)
+        GL_QUERY_ERROR(glBindVertexArray(m_vao);)
         GL_QUERY_ERROR(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);)
 
         glfwSwapBuffers(window);
+        GL_QUERY_ERROR(glDeleteTextures(1, &m_texture_id);)
+
+        // -----------------------------
+        // Enforce 30 fps
+        // -----------------------------
+        /// TODO: maybe come back and use better timing (maybe)
+        const f64 new_time = glfwGetTime(); // Time in seconds
+        const f64 frame_time = new_time-last_time;
+        const f64 target_frame_time = 1.0 / 30.0; // ~0.0333 secs
+        
+        if (frame_time < target_frame_time) {
+            f64 sleep_duration = target_frame_time - frame_time;
+            pause_thread(sleep_duration);
+        }
+        last_time = glfwGetTime();
     }
 
-    GL_QUERY_ERROR(glDeleteProgram(this->m_shader);)
-    free_image_data(&test_texture);
+    GL_QUERY_ERROR(glDeleteProgram(m_shader);)
 }
 
 Window::~Window() {
-    glfwDestroyWindow((GLFWwindow*) this->m_window_handle);
-    glfwTerminate();
+    if (m_window_handle != nullptr) {
+        glfwDestroyWindow((GLFWwindow*) m_window_handle);
+        glfwTerminate();
+    }
 }

@@ -1,5 +1,5 @@
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#ifndef TYPES_HH
+#define TYPES_HH
 
 #include <cstdint>
 
@@ -16,4 +16,4 @@ typedef uint64_t u64;
 typedef float f32;
 typedef double f64;
 
-#endif // TYPES_HPP
+#endif // TYPES_HH

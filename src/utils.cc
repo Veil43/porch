@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "utils.hh"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -22,7 +22,7 @@ std::string load_text_from_file(const std::string& path) {
     return oss.str();
 }
 
-ImageData load_image_data(const std::string& path, u32 n_channels, bool should_flip) {
+ImageData load_image_from_file(const std::string& path, u32 n_channels, bool should_flip) {
     ImageData output_data = {};
 
     if (should_flip) {

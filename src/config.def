@@ -1,0 +1,6 @@
+#pragma once
+
+#define DEFAULT_WINDOW_WIDTH 800.0
+#define DEFAULT_WINDOW_ASPECT_RATIO 1.0
+#define DEFAULT_WINDOW_NAME "Default Window Title"
+#define DEFAULT_WINDOW_RESIZE GLFW_FALSE
