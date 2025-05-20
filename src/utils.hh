@@ -3,7 +3,6 @@
 
 #include "types.hh"
 #include <string>
-#include <mutex>
 
 #ifdef PORCH_DEBUG
 #include <iostream>
@@ -37,8 +36,6 @@ struct ImageData {
     i32 height;
     i32 channel_count;
 };
-
-
 
 ImageData load_image_from_file(const std::string& path, u32 n_channels = 0, bool should_flip = true);
 void free_image_data(ImageData* image);

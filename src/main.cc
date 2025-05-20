@@ -1,5 +1,7 @@
 #include "renderer.hh"
 
+#include <iostream>
+
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     #define _CRT_MAP_ALLOC
     #include <cstdlib>
@@ -14,6 +16,7 @@ int main(int argc, char** argv) {
     Renderer porch{};
     porch.m_image_width = 800.0;
     porch.m_aspect_ratio = 2;
+    porch.m_image_name = "Porch";
     if (porch.create_canvas()) {
         porch.render_scene();
     } else {

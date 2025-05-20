@@ -159,13 +159,12 @@ static void setup_opengl_draw_surface(u32* vao, u32* vbo, u32* ebo) {
 //     }
 // }
 
-Window::Window(
-    SharedData& image, 
+Window::Window( 
     u32 width, u32 height, 
     const std::string& name, bool resizable
 ) 
     : m_width{width}, m_height{height}, m_name{name},
-      m_incoming_image{image}, m_resizable{resizable}
+      m_resizable{resizable}
 {}
 
 bool Window::create_opengl_window() {
@@ -214,7 +213,7 @@ bool Window::create_opengl_window() {
     return true;
 }
 
-void Window::launch_window_loop() {
+void Window::launch_window_loop(SharedData& source) {
     if (!m_window_handle) {
         std::cerr << "Error: cannot launch a window with failed initialization\n";
         return;
@@ -242,15 +241,15 @@ void Window::launch_window_loop() {
         // Request image from owner else don't make a new draw
         // ----------------------------------------------------
         utils::ImageData image = {};
-        {
-            std::unique_lock<std::mutex> lock(m_incoming_image.mtx, std::try_to_lock);
+        if (source.data) {
+            std::unique_lock<std::mutex> lock(source.mtx, std::try_to_lock);
             if (lock.owns_lock()) {
-                image.width = m_incoming_image.width;
-                image.height = m_incoming_image.height;
-                image.channel_count = m_incoming_image.channel_count;
+                image.width = source.width;
+                image.height = source.height;
+                image.channel_count = source.channel_count;
                 size_t size = image.width * image.height * image.channel_count;
                 image.data = new u8[size];
-                std::memcpy(image.data, m_incoming_image.data, size);
+                std::memcpy(image.data, source.data, size);
             } 
         }
 
