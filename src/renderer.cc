@@ -47,11 +47,13 @@ bool Renderer::create_canvas(bool resizable) {
     return false;
 }
 
-static void async_render(SharedData& dest) {
+static void async_render(SharedData& dest, f32 width, f32 ar) {
+#ifdef RENDER_PLAIN
     auto raw = utils::load_image_from_file("../resources/sky.ppm");
     size_t size = raw.width * raw.height * raw.channel_count;
     {
         std::lock_guard<std::mutex> lock(dest.mtx);
+        
         dest.width = raw.width;
         dest.height = raw.height;
         dest.channel_count = raw.channel_count;
@@ -59,6 +61,37 @@ static void async_render(SharedData& dest) {
     }
     std::memcpy(dest.data, raw.data, size);
     utils::free_image_data(&raw);
+#endif
+struct Color {
+    u8 r;
+    u8 g;
+    u8 b;
+};
+    u32 h = width / ar;
+    u32 w = h * ar;
+
+    Color* buffer = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(dest.mtx);
+        size_t size = h * w * 3;
+        dest.width = w;
+        dest.height = h;
+        dest.channel_count = 3;
+        dest.data = new u8[size];
+        buffer = (Color*)dest.data;
+    }
+
+    u32 image_w = w;
+    u32 image_h = h - 100;
+
+    for (size_t y = 0; y < image_h; y++) {
+        std::lock_guard<std::mutex> lock(dest.mtx);
+        for (size_t x = 0; x < image_w; x++) {
+            size_t y_inv = h -1 - y;
+            size_t index = y_inv * image_w + x;
+            buffer[index] = {255, 0, 0};
+        }
+    }
 }
 
 void Renderer::render_scene() {
@@ -67,7 +100,7 @@ void Renderer::render_scene() {
         return;
     }
 
-    std::thread t_render(async_render, std::ref(m_shared_image));
+    std::thread t_render(async_render, std::ref(m_shared_image), m_image_width, m_aspect_ratio);
     m_main_window->launch_window_loop(m_shared_image);
 
     t_render.join();
