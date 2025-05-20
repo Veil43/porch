@@ -14,8 +14,8 @@ int main(int argc, char** argv) {
 #endif 
 
     Renderer porch{};
-    porch.m_image_width = 256.0;
-    porch.m_aspect_ratio = 1;
+    porch.m_image_width = 400.0;
+    porch.m_aspect_ratio = 16.0/9.0;
     porch.m_image_name = "Porch";
     if (porch.create_canvas(true)) {
         porch.render_scene();

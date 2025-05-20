@@ -29,15 +29,48 @@ public:
 
 using point3 = vec3;
 
-inline std::ostream& operator<<(std::ostream& out, const vec3& v);
-inline vec3 operator+(const vec3& u, const vec3& v);
-inline vec3 operator-(const vec3& u, const vec3& v);
-inline vec3 operator*(const vec3& u, const vec3& v);
-inline vec3 operator*(double t, const vec3& v);
-inline vec3 operator*(const vec3& v, double t);
-inline vec3 operator/(const vec3& v, double t);
-inline double dot(const vec3& u, const vec3& v);
-inline vec3 cross(const vec3& u, const vec3& v) ;
-inline vec3 unit_vector(const vec3& v);
+inline std::ostream& operator<<(std::ostream& out, const vec3& v) {
+    return out << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
+}
+
+inline vec3 operator+(const vec3& u, const vec3& v) {
+    return vec3(u.x + v.x, u.y + v.y, u.z + v.z);
+}
+
+inline vec3 operator-(const vec3& u, const vec3& v) {
+    return vec3(u.x - v.x, u.y - v.y, u.z - v.z);
+}
+
+inline vec3 operator*(const vec3& u, const vec3& v) {
+    return vec3(u.x * v.x, u.y * v.y, u.z * v.z);
+}
+
+inline vec3 operator*(f64 t, const vec3& v) {
+    return vec3(v.x*t, v.y*t, v.z*t);
+}
+
+inline vec3 operator*(const vec3& v, double t) {
+    return vec3(v.x*t, v.y*t, v.z*t);
+}
+
+inline vec3 operator/(const vec3& v, double t) {
+    return vec3(v.x/t, v.y/t, v.z/t);
+}
+
+inline f64 dot(const vec3& u, const vec3& v) {
+    return (u.x * v.x) + (u.y * v.y) + (u.z * v.z); 
+}
+
+inline vec3 cross(const vec3& u, const vec3& v) {
+    return vec3(
+        u.y*v.z - u.z*v.y,
+        v.x*u.z - u.x*v.z,
+        u.x*v.y - v.x*u.y
+    );
+}
+
+inline vec3 unit_vector(const vec3& v) {
+    return v/v.length();
+}
 
 #endif // VEC3_HH

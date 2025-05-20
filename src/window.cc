@@ -137,30 +137,12 @@ static void setup_opengl_draw_surface(u32* vao, u32* vbo, u32* ebo) {
     GL_QUERY_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);)
 }
 
-// static DECL_WINDOW_RENDER_CALLBACK(default_window_render_callback) {
-//     return {};
-// } TODO REMOVE
-
 // -------------------------------------------------------------------------------------------------
 // class Window implementation
 // -------------------------------------------------------------------------------------------------
-// Window::Window(
-//     __window_render_callback_type__* render_callback, 
-//     f32 width, f32 aspect_ratio, const std::string& name
-// ) 
-//     : m_width{width}, m_aspect_ratio{aspect_ratio}, m_name{name},
-//       m_render_callback{render_callback}
-// {
-//     if (render_callback == nullptr) {
-//         std::cerr << "Warning: window not provided with valid callback!\n";
-//         m_render_callback = default_window_render_callback;
-//     } else {
-//         m_render_callback = render_callback;
-//     }
-// }
 
 Window::Window( 
-    u32 width, u32 height, 
+    i32 width, i32 height, 
     const std::string& name, bool resizable
 ) 
     : m_width{width}, m_height{height}, m_name{name},

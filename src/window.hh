@@ -8,19 +8,19 @@
 struct SharedData {
     std::mutex mtx;
     u8* data = nullptr;
-    u32 width = 0;
-    u32 height = 0;
-    u32 channel_count = 0;
+    i32 width = 0;
+    i32 height = 0;
+    i32 channel_count = 0;
 };
 
 class Window {
 public:
-    u32 m_width;
-    u32 m_height;
+    i32 m_width;
+    i32 m_height;
     std::string m_name;
     bool m_resizable;
 
-    Window(u32 width, u32 height, 
+    Window(i32 width, i32 height, 
            const std::string& name, bool resizable);
 
     ~Window();
