@@ -14,13 +14,13 @@ int main(int argc, char** argv) {
 #endif 
 
     Renderer porch{};
-    porch.m_image_width = 800.0;
-    porch.m_aspect_ratio = 2;
+    porch.m_image_width = 256.0;
+    porch.m_aspect_ratio = 1;
     porch.m_image_name = "Porch";
-    if (porch.create_canvas()) {
+    if (porch.create_canvas(true)) {
         porch.render_scene();
     } else {
-        std::cerr << "Could not create a window\n";
+        std::cerr << "Could not create a render canvas!\n";
     }
 
     return 0;

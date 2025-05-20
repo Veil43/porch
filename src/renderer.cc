@@ -3,6 +3,8 @@
 #include "renderer.hh"
 #include "window.hh"
 #include "utils.hh"
+#include "vec3.hh"
+#include "color.hh"
 
 #include <thread>
 
@@ -62,15 +64,10 @@ static void async_render(SharedData& dest, f32 width, f32 ar) {
     std::memcpy(dest.data, raw.data, size);
     utils::free_image_data(&raw);
 #endif
-struct Color {
-    u8 r;
-    u8 g;
-    u8 b;
-};
     u32 h = width / ar;
     u32 w = h * ar;
 
-    Color* buffer = nullptr;
+    void* buffer = nullptr;
     {
         std::lock_guard<std::mutex> lock(dest.mtx);
         size_t size = h * w * 3;
@@ -78,18 +75,23 @@ struct Color {
         dest.height = h;
         dest.channel_count = 3;
         dest.data = new u8[size];
-        buffer = (Color*)dest.data;
+        buffer = (void*)dest.data;
     }
 
-    u32 image_w = w;
-    u32 image_h = h - 100;
+    u32 image_width = w;
+    u32 image_height = h;
 
-    for (size_t y = 0; y < image_h; y++) {
+    for (size_t y = 0; y < image_height; y++) {
         std::lock_guard<std::mutex> lock(dest.mtx);
-        for (size_t x = 0; x < image_w; x++) {
+        for (size_t x = 0; x < image_width; x++) {
             size_t y_inv = h -1 - y;
-            size_t index = y_inv * image_w + x;
-            buffer[index] = {255, 0, 0};
+            size_t index = y_inv * image_width + x;
+
+            f32 r = f32(x) / (image_width - 1);
+            f32 g = f32(y) / (image_height - 1);
+            f32 b = 0;
+
+            write_color_to_buffer((void*)buffer, index, color{r, g, b});
         }
     }
 }

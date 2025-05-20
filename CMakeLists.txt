@@ -10,7 +10,9 @@ add_executable(porch src/main.cc
     third-party/glad/src/glad.c
     src/window.cc
     src/utils.cc
-    src/renderer.cc)
+    src/renderer.cc
+    src/vec3.cc
+    src/color.cc)
 
 # Add third-parties here
 add_subdirectory(third-party/glfw)
