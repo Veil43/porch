@@ -3,32 +3,35 @@
 
 #include "config.def"
 #include "types.hh"
+#include "window.hh"
 
 #include <string>
+#include <memory>
 
-enum class eTargetOption : u8 {
+enum class eImgDest : u8 {
     kScreen,
     kImageFile,
     kScreenAndFile,
 };
 
-struct RendererConfig {
-    std::string image_name = DEFAULT_WINDOW_NAME;
-    f32 image_width = DEFAULT_WINDOW_WIDTH;
-    f32 image_aspect_ratio = DEFAULT_WINDOW_ASPECT_RATIO;
-    eTargetOption target_option = eTargetOption::kScreen;
+class Renderer {
+public:
+    eImgDest m_img_dst = eImgDest::kScreen;
+    f32 m_image_width = DEFAULT_WINDOW_WIDTH;
+    f32 m_aspect_ratio = DEFAULT_WINDOW_ASPECT_RATIO;
+    std::string m_image_name = DEFAULT_WINDOW_NAME;
+
+    Renderer(f32 width = DEFAULT_WINDOW_WIDTH, f32 aspect_ratio = DEFAULT_WINDOW_ASPECT_RATIO, const std::string& image_name = DEFAULT_WINDOW_NAME);
+    ~Renderer();
+
+    void load_scene();
+    void render_scene();
+    bool create_canvas(bool resizable = false);
+
+private:
+    bool m_valid_destination = false;
+    SharedData m_shared_image;
+    std::unique_ptr<Window> m_main_window = nullptr;
 };
-
-namespace renderer
-{
-
-void initialize_renderer(RendererConfig config = {});
-void clean_up_renderer();
-void load_scene();
-void render_scene();
-
-RendererConfig get_config();
-void set_config(RendererConfig);
-} // namespace renderer
 
 #endif // RENDERER_HH

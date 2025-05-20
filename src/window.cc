@@ -137,27 +137,36 @@ static void setup_opengl_draw_surface(u32* vao, u32* vbo, u32* ebo) {
     GL_QUERY_ERROR(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);)
 }
 
-static DECL_WINDOW_RENDER_CALLBACK(default_window_render_callback) {
-    return {};
-}
+// static DECL_WINDOW_RENDER_CALLBACK(default_window_render_callback) {
+//     return {};
+// } TODO REMOVE
 
 // -------------------------------------------------------------------------------------------------
 // class Window implementation
 // -------------------------------------------------------------------------------------------------
+// Window::Window(
+//     __window_render_callback_type__* render_callback, 
+//     f32 width, f32 aspect_ratio, const std::string& name
+// ) 
+//     : m_width{width}, m_aspect_ratio{aspect_ratio}, m_name{name},
+//       m_render_callback{render_callback}
+// {
+//     if (render_callback == nullptr) {
+//         std::cerr << "Warning: window not provided with valid callback!\n";
+//         m_render_callback = default_window_render_callback;
+//     } else {
+//         m_render_callback = render_callback;
+//     }
+// }
+
 Window::Window(
-    __window_render_callback_type__* render_callback, 
-    f32 width, f32 aspect_ratio, const std::string& name
+    SharedData& image, 
+    u32 width, u32 height, 
+    const std::string& name, bool resizable
 ) 
-    : m_width{width}, m_aspect_ratio{aspect_ratio}, m_name{name},
-      m_render_callback{render_callback}
-{
-    if (render_callback == nullptr) {
-        std::cerr << "Warning: window not provided with valid callback!\n";
-        m_render_callback = default_window_render_callback;
-    } else {
-        m_render_callback = render_callback;
-    }
-}
+    : m_width{width}, m_height{height}, m_name{name},
+      m_incoming_image{image}, m_resizable{resizable}
+{}
 
 bool Window::create_opengl_window() {
     if (!glfwInit()) {
@@ -171,12 +180,13 @@ bool Window::create_opengl_window() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif 
-    glfwWindowHint(GLFW_RESIZABLE, DEFAULT_WINDOW_RESIZE);
+    
+    i32 resizable = (m_resizable) ? GLFW_TRUE: GLFW_FALSE;
+    glfwWindowHint(GLFW_RESIZABLE, resizable);
 
-    f32 height = m_width / m_aspect_ratio;
     GLFWwindow* window = glfwCreateWindow(
         static_cast<i32>(m_width), 
-        static_cast<i32>(height), 
+        static_cast<i32>(m_height), 
         m_name.c_str(), 
         NULL, NULL);
     
@@ -228,25 +238,35 @@ void Window::launch_window_loop() {
         glfwPollEvents();
         process_input(window);
 
-        // ------------------------------------------------
-        // Request image from owner else load default image
-        // ------------------------------------------------
-        m_surface = m_render_callback();
-        if (m_surface.data == nullptr) {
-            m_surface = utils::load_image_from_file("../resources/sample.ppm");
-        } 
-        m_texture_id = load_image_to_gpu(m_surface, m_shader, 1, "canvas");
-        free_image_data(&m_surface);
+        // ----------------------------------------------------
+        // Request image from owner else don't make a new draw
+        // ----------------------------------------------------
+        utils::ImageData image = {};
+        {
+            std::unique_lock<std::mutex> lock(m_incoming_image.mtx, std::try_to_lock);
+            if (lock.owns_lock()) {
+                image.width = m_incoming_image.width;
+                image.height = m_incoming_image.height;
+                image.channel_count = m_incoming_image.channel_count;
+                size_t size = image.width * image.height * image.channel_count;
+                image.data = new u8[size];
+                std::memcpy(image.data, m_incoming_image.data, size);
+            } 
+        }
 
-        GL_QUERY_ERROR(glClearColor(0.0, 0.0, 0.0, 1.0);)
-        GL_QUERY_ERROR(glClear(GL_COLOR_BUFFER_BIT);)
-
-        GL_QUERY_ERROR(glUseProgram(m_shader);)
-        GL_QUERY_ERROR(glBindVertexArray(m_vao);)
-        GL_QUERY_ERROR(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);)
-
-        glfwSwapBuffers(window);
-        GL_QUERY_ERROR(glDeleteTextures(1, &m_texture_id);)
+        if (image.data) {
+            m_texture_id = load_image_to_gpu(image, m_shader, 1, "canvas");
+            GL_QUERY_ERROR(glClearColor(0.0, 0.0, 0.0, 1.0);)
+            GL_QUERY_ERROR(glClear(GL_COLOR_BUFFER_BIT);)
+            
+            GL_QUERY_ERROR(glUseProgram(m_shader);)
+            GL_QUERY_ERROR(glBindVertexArray(m_vao);)
+            GL_QUERY_ERROR(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);)
+            
+            glfwSwapBuffers(window);
+            GL_QUERY_ERROR(glDeleteTextures(1, &m_texture_id);)
+            delete[] image.data;
+        }
 
         // -----------------------------
         // Enforce 30 fps

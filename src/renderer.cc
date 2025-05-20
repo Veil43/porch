@@ -2,74 +2,71 @@
 // by Reuel Nkomo 2025
 #include "renderer.hh"
 #include "window.hh"
+#include "utils.hh"
 
-namespace renderer
-{
+#include <thread>
 
-// --------------------------------------------------------
-// Helper
-// --------------------------------------------------------
-static DECL_WINDOW_RENDER_CALLBACK(__window_render_callback) {
-    static constexpr bool tick = true;
-    if (tick) {
-        return utils::load_image_from_file("../resources/sky.ppm");
-    }
-    return {};
+Renderer::Renderer(f32 width, f32 aspect_ratio, const std::string& name)
+    : m_shared_image{ std::mutex()}
+{}
+
+Renderer::~Renderer() {
+    std::lock_guard<std::mutex> lock(m_shared_image.mtx);
 }
 
-// --------------------------------------------------------
-// Public API
-// --------------------------------------------------------
-/// NOTE: Find out when thi is initialized
-static Window* g_s_window_ptr;
-static bool s_g_print_to_file = false;
-void initialize_renderer(RendererConfig config) {
-    auto o = config.target_option;
-    if (o == eTargetOption::kScreenAndFile) {
-        g_s_window_ptr = new Window(__window_render_callback, config.image_width, config.image_aspect_ratio, config.image_name);
-        s_g_print_to_file = true;
+bool Renderer::create_canvas(bool resizable) {
+    switch (m_img_dst) {
+        case eImgDest::kScreen: {
+            u32 height = m_image_width / m_aspect_ratio;
+            m_main_window = std::make_unique<Window>(m_shared_image, static_cast<u32>(m_image_width), height, m_image_name, resizable);
+            if (m_main_window) {
+                m_valid_destination = m_main_window->create_opengl_window();
+                return m_valid_destination;
+            }
+        } break;
+
+        case eImgDest::kImageFile: {
+            /// TODO: Add image writing
+            std::cerr << "Error: image writing not supported yet\n";
+            return false;
+        } break;
+
+        default: {
+            /// TODO: Add image writing
+            std::cerr << "Error: image writing not supported yet!\n";
+            return false;
+        }
+    }
+
+    return false;
+}
+
+void Renderer::render_scene() {
+    if (!m_valid_destination) {
+        std::cerr << "Error: cannot render without a valid destination!\n";
         return;
     }
 
-    if (o == eTargetOption::kScreen) {
-        g_s_window_ptr = new Window(__window_render_callback, config.image_width, config.image_aspect_ratio, config.image_name);
-        return;
-    }
+    // std::lock_guard<std::mutex> lock(m_shared_image.mtx);
+    // std::thread t_render(render);
+    // t_render.detach();
 
-    if (o == eTargetOption::kImageFile) {
-        s_g_print_to_file = true;
-        return;
-    }
-}
+    auto raw = utils::load_image_from_file("../resources/sky.ppm");
+    size_t size = raw.width * raw.height * raw.channel_count;
+    m_shared_image.width = raw.width;
+    m_shared_image.height = raw.height;
+    m_shared_image.channel_count = raw.channel_count;
+    m_shared_image.data = new u8[size];
+    std::memcpy(m_shared_image.data, raw.data, size);
+    utils::free_image_data(&raw);
 
-void clean_up_renderer() {
-    delete g_s_window_ptr;
-    g_s_window_ptr = nullptr;
-}
+    m_main_window->launch_window_loop();
 
-void load_scene() {
-    /// TODO: What do you even mean by "scene"?
-}
-
-void render_scene() {
-    /// TODO: were we given a scene??
-    if (g_s_window_ptr != nullptr && g_s_window_ptr->create_opengl_window()) {
-        g_s_window_ptr->launch_window_loop();
-    } else {
-        s_g_print_to_file = true;
-        std::cerr << "Warn: cant find a screen, defaulting to image!\n";
-    }
-
-    if (s_g_print_to_file) {
-        /// TODO: print to image
-        std::cerr << "Error: cant print to file just yet!\n";
-        return;
+    if (m_shared_image.data != nullptr) {
+        delete[] m_shared_image.data;
     }
 }
 
-// --------------------------------------------------------
-// Renderer
-// --------------------------------------------------------
-static void render(/*Scene*/);
+void Renderer::load_scene() {
 
-} // namespace renderer
+}

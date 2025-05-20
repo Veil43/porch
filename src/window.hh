@@ -3,33 +3,39 @@
 
 #include "types.hh"
 #include "utils.hh"
-#include "config.def"
 
 #include <string>
 
-#define DECL_WINDOW_RENDER_CALLBACK(name) utils::ImageData name(void)
-typedef DECL_WINDOW_RENDER_CALLBACK(__window_render_callback_type__);
+struct SharedData {
+    std::mutex mtx;
+    u8* data;
+    u32 width;
+    u32 height;
+    u32 channel_count;
+};
 
 class Window {
-static constexpr f32 kDefaultWidth = DEFAULT_WINDOW_WIDTH;
-static constexpr f32 kDefaultAspectRatio = DEFAULT_WINDOW_ASPECT_RATIO;
-static constexpr const char* kDefaultName = DEFAULT_WINDOW_NAME;
 public:
-    float m_width;
-    float m_aspect_ratio;
+    u32 m_width;
+    u32 m_height;
     std::string m_name;
+    bool m_resizable;
 
-    Window(__window_render_callback_type__* render_callback, 
-           f32 width = kDefaultWidth, f32 aspect_ratio = kDefaultAspectRatio, 
-           const std::string& name = kDefaultName);
+    // Window(__window_render_callback_type__* render_callback, 
+    //        f32 width = kDefaultWidth, f32 aspect_ratio = kDefaultAspectRatio, 
+    //        const std::string& name = kDefaultName);
+
+    Window(SharedData& image, 
+           u32 width, u32 height, 
+           const std::string& name, bool resizable);
 
     ~Window();
     void launch_window_loop();
     bool create_opengl_window();
     
 private:
-    utils::ImageData m_surface = {};
-    __window_render_callback_type__* m_render_callback;
+    // __window_render_callback_type__* m_render_callback;
+    SharedData& m_incoming_image;
     void* m_window_handle = nullptr;
     
     u32 m_vao;
