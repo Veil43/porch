@@ -15,7 +15,8 @@ public:
 
     vec3();
     vec3(f64 x, f64 y, f64 z);
-
+    vec3(f64 val);
+    
     vec3 operator-() const;
     f64 operator[](i32 i) const;
     f64& operator[](i32 i);

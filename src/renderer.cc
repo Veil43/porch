@@ -6,9 +6,11 @@
 #include "color.hh"
 #include "ray.hh"
 #include "math.hh"
+#include "sphere.hh"
+#include "hittable.hh"
+#include "hittable_list.hh"
 
-#include "utils.hh"
-
+#include <iostream>
 #include <thread>
 
 Renderer::Renderer(f32 width, f32 aspect_ratio, const std::string& name)
@@ -52,13 +54,18 @@ bool Renderer::create_canvas(bool resizable) {
     return false;
 }
 
-color ray_color(ray r) {
+static color compute_ray_color(const ray& r, Hittable& scene) {
+    using namespace math;
+    HitRecord record;
+    if (scene.hit(r, Interval(0.0, infinity), record)) {
+        return 0.5 * color(record.normal + color(1.0)); // bring into range 0-1
+    }
+
     vec3 unit_dir = unit_vector(r.direction());
-    f64 t = 0.5 * (unit_dir.y + 1.0);
-    // t==1 blue
-    // t==0 = white
-    color sky_tone = lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), t);
-    // return color(1.0, 1.0, 1.0);
+    f64 a = 0.5 * (unit_dir.y + 1.0);
+    // a==1 blue
+    // a==0 = white
+    color sky_tone = math::lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), a);
     return sky_tone;
 }
 
@@ -88,6 +95,18 @@ static void async_render(SharedData& dest, f32 width, f32 ar) {
         buffer = (void*)dest.data;
     }
 
+    // ------------------------------------------
+    // Sample Scene
+    // ------------------------------------------
+    HittableList sample_scene;
+
+    sample_scene.add(make_shared<Sphere>(point3(0.0,0.0,-1.0), 0.5)); // p=00-1, r=.5
+    sample_scene.add(make_shared<Sphere>(point3(0.0,-100.5,-1.0), 100.0));
+    
+    // ------------------------------------------
+    // Camera Config
+    // ------------------------------------------
+
     /// NOTE: here width can be rounded down or height squashed to 1
     /// Thus we have to recalculate viewport ar to match the target image
     f64 viewport_aspect_ratio = f64(image_width)/image_height;
@@ -104,6 +123,10 @@ static void async_render(SharedData& dest, f32 width, f32 ar) {
                    - 0.5*(viewport_u + viewport_v) 
                    + 0.5*(u_delta + v_delta);
 
+    // ------------------------------------------
+    // Render Loop
+    // ------------------------------------------
+
     for (size_t y = 0; y < image_height; y++) {
         std::lock_guard<std::mutex> lock(dest.mtx);
         for (size_t x = 0; x < image_width; x++) {
@@ -114,12 +137,9 @@ static void async_render(SharedData& dest, f32 width, f32 ar) {
             vec3 ray_dir = pixel_center - camera_center;
             ray r = ray(camera_center, ray_dir);
 
-            color pixel_color = ray_color(r);
-            // f32 r = f32(x) / (image_width - 1);
-            // f32 g = 0;
-            // f32 b = f32(y) / (image_height - 1);
+            color pixel_color = compute_ray_color(r, sample_scene);
 
-            write_color_to_buffer((void*)buffer, index, pixel_color);
+            write_color_to_buffer(buffer, index, pixel_color);
         }
     }
 }

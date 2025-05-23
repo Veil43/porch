@@ -13,7 +13,10 @@ add_executable(porch src/main.cc
     src/renderer.cc
     src/vec3.cc
     src/color.cc
-    src/ray.cc)
+    src/ray.cc
+    src/sphere.cc
+    src/hittable_list.cc
+    src/camera.cc)
 
 # Add third-parties here
 add_subdirectory(third-party/glfw)

@@ -1,5 +1,5 @@
 // window.cc
-// by Reuel Nkomo 2025
+// by Reuel Nkomo, May 2025
 #include "window.hh"
 #include "types.hh"
 #include "utils.hh"
