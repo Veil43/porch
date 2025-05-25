@@ -6,6 +6,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace utils 
 {
@@ -41,6 +44,25 @@ ImageData load_image_from_file(const std::string& path, u32 n_channels, bool sho
 void free_image_data(ImageData* image) {
     stbi_image_free(image->data);
     *image = {};
+}
+
+std::string repeat(std::string input, int n) {
+    for (int i = 0; i < n; i++) {
+        input+=input;
+    }
+    return input;
+}
+
+std::string find_true_path(const std::string& origin) {
+    std::string true_path = origin;
+    const int search_depth = 10;
+    for (int i = 0; i < search_depth; i++) {
+        true_path = repeat("../", i) + origin;
+        if (fs::exists(true_path)) {
+            return true_path;
+        }
+    }
+    return origin;
 }
 
 } // namespace utils

@@ -15,6 +15,10 @@ void write_color_to_out(std::ostream& out, const color& pixel_color) {
     out << rbyte << ' ' << gbyte << ' ' << bbyte << '\n';
 }
 
+void write_color_to_buffer(void* buffer, int x, int y, const color& pixel_color) {
+}
+
+
 void write_color_to_buffer(void* buffer, size_t index, const color& pixel_color) {
     auto r = pixel_color.r;
     auto g = pixel_color.g;

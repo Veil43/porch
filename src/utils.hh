@@ -40,6 +40,8 @@ struct ImageData {
 ImageData load_image_from_file(const std::string& path, u32 n_channels = 0, bool should_flip = true);
 void free_image_data(ImageData* image);
 std::string load_text_from_file(const std::string& path);
+std::string find_true_path(const std::string& origin);
+std::string repeat(std::string input, int n);
 
 } // namespace utils
 

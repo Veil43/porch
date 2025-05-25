@@ -208,7 +208,7 @@ void Window::launch_window_loop(SharedData& source) {
     // -----------------------------
     // Create a shader
     // -----------------------------
-    m_shader = create_shader("../resources/window.vertex", "../resources/window.fragment");
+    m_shader = create_shader(utils::find_true_path("resources/window.vertex"), utils::find_true_path("resources/window.fragment"));
     
     // -----------------------------
     // Render loop
