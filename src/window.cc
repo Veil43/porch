@@ -215,6 +215,13 @@ void Window::launch_window_loop(SharedData& source) {
     // -----------------------------
     f64 last_time = glfwGetTime();
     GLFWwindow* window = (GLFWwindow*) m_window_handle;
+    utils::ImageData image = {};
+    image.width = source.width;
+    image.height = source.height;
+    image.channel_count = source.channel_count;
+    size_t size = image.width * image.height * image.channel_count;
+    image.data = new u8[size];
+
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         process_input(window);
@@ -222,17 +229,9 @@ void Window::launch_window_loop(SharedData& source) {
         // ----------------------------------------------------
         // Request image from owner else don't make a new draw
         // ----------------------------------------------------
-        utils::ImageData image = {};
-        if (source.data) {
-            std::unique_lock<std::mutex> lock(source.mtx, std::try_to_lock);
-            if (lock.owns_lock()) {
-                image.width = source.width;
-                image.height = source.height;
-                image.channel_count = source.channel_count;
-                size_t size = image.width * image.height * image.channel_count;
-                image.data = new u8[size];
-                std::memcpy(image.data, source.data, size);
-            } 
+        if (!source.is_writing.load()) {
+            std::memcpy(image.data, source.data, size);
+            source.is_writing = true; // release this so the renderer can keep drawing
         }
 
         if (image.data) {
@@ -246,7 +245,6 @@ void Window::launch_window_loop(SharedData& source) {
             
             glfwSwapBuffers(window);
             GL_QUERY_ERROR(glDeleteTextures(1, &m_texture_id);)
-            delete[] image.data;
         }
 
         // -----------------------------
@@ -262,6 +260,9 @@ void Window::launch_window_loop(SharedData& source) {
             pause_thread(sleep_duration);
         }
         last_time = glfwGetTime();
+    }
+    if (image.data) {
+        delete[] image.data;
     }
     GL_QUERY_ERROR(glDeleteProgram(m_shader);)
 }

@@ -44,3 +44,8 @@ f64 vec3::length() const {
 f64 vec3::length_squared() const {
     return x*x + y*y + z*z;
 }
+
+bool vec3::near_zero() const {
+    f64 eps = 1e-8;
+    return (std::fabs(x) < eps) && (std::fabs(y) < eps) && (std::fabs(z) < eps);
+}

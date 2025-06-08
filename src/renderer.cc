@@ -10,16 +10,18 @@
 #include "hittable.hh"
 #include "hittable_list.hh"
 #include "camera.hh"
+#include "material.hh"
 
 #include <iostream>
 #include <thread>
+#include <atomic>
+#include <memory>
 
 Renderer::Renderer(f32 width, f32 aspect_ratio, const std::string& name)
-    : m_shared_image{ std::mutex()}
+    : m_shared_image{std::atomic<bool>(true)}
 {}
 
 Renderer::~Renderer() {
-    std::lock_guard<std::mutex> lock(m_shared_image.mtx);
 }
 
 bool Renderer::create_canvas(bool resizable) {
@@ -55,66 +57,65 @@ bool Renderer::create_canvas(bool resizable) {
     return false;
 }
 
-static color compute_ray_color(const ray& r, Hittable& scene) {
-    using namespace math;
-    HitRecord record;
-    if (scene.hit(r, Interval(0.0, infinity), record)) {
-        return 0.5 * color(record.normal + color(1.0)); // bring into range 0-1
-    }
+struct RendererConfig {
+    f32 width;
+    f32 aspect_ratio;
+    i32 samples_per_pixel;
+    i32 max_bounces;
+};
 
-    vec3 unit_dir = unit_vector(r.direction());
-    f64 a = 0.5 * (unit_dir.y + 1.0);
-    // a==1 blue
-    // a==0 = white
-    color sky_tone = math::lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), a);
-    return sky_tone;
-}
-
-static void async_render(SharedData& dest, f32 width, f32 ar) {
-    if (ar <= 0.0) {
-        std::cerr << "Error::Renderer: cannot render an image with aspect ratio: " << ar << "\n";
+static void async_render(SharedData& dest, RendererConfig config, std::shared_ptr<std::atomic<bool>> running) {
+    if (config.aspect_ratio <= 0.0) {
+        std::cerr << "Error::Renderer: cannot render an image with aspect ratio: " << config.aspect_ratio << "\n";
         return;
     }
 
-    if (width <= 0.0) {
-        std::cerr << "Error::Renderer: cannot render an image with width: " << width << "\n";
+    if (config.width <= 0.0) {
+        std::cerr << "Error::Renderer: cannot render an image with width: " << config.width << "\n";
         return;
     }
 
-    i32 image_width = width;
-    i32 image_height = i32(image_width/ar);
+    i32 image_width = config.width;
+    i32 image_height = i32(image_width/config.aspect_ratio);
     image_height = (image_height < 1)? 1 : image_height;
     
-    void* buffer = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(dest.mtx);
-        size_t size = image_height * image_width * 3;
-        dest.width = image_width;
-        dest.height = image_height;
-        dest.channel_count = 3;
-        dest.data = new u8[size];
-        buffer = (void*)dest.data;
-    }
+    dest.is_writing.store(true);
+    size_t size = image_height * image_width * 3;
+    dest.width = image_width;
+    dest.height = image_height;
+    dest.channel_count = 3;
+    dest.data = new u8[size];
+    dest.is_writing.store(false);
 
     // ------------------------------------------
     // Sample Scene
     // ------------------------------------------
     HittableList sample_scene;
 
-    sample_scene.add(make_shared<Sphere>(point3(0.0,0.0,-1.0), 0.5)); // p=00-1, r=.5
-    sample_scene.add(make_shared<Sphere>(point3(0.0,-100.5,-1.0), 100.0));
+    auto material_ground = make_shared<Lambertian>(color(0.8, 0.8, 0.0));
+    auto material_center = make_shared<Lambertian>(color(0.1, 0.2, 0.5));
+    auto material_left   = make_shared<Metal>(color(0.8, 0.8, 0.8));
+    auto material_right  = make_shared<Metal>(color(0.8, 0.6, 0.2));
+
+    sample_scene.add(make_shared<Sphere>(point3(0.0,-100.5,-1.0), 100.0, material_ground));
+    sample_scene.add(make_shared<Sphere>(point3(0.0,0.0,-1.2), 0.5, material_center));
+    sample_scene.add(make_shared<Sphere>(point3(-1.0,0.0,-1.0), 0.5, material_left));
+    sample_scene.add(make_shared<Sphere>(point3( 1.0,0.0,-1.0), 0.5, material_right));
     
     // ------------------------------------------
     // Camera Config
     // ------------------------------------------
     Camera main_camera{};
-    main_camera.m_aspcet_ratio = ar;
-    main_camera.m_image_width = width;
-    
+    main_camera.m_aspcet_ratio = config.aspect_ratio;
+    main_camera.m_image_width = config.width;
+    main_camera.m_samples_per_pixel = config.samples_per_pixel;
+    main_camera.m_max_bounces = config.max_bounces;
+
     // ------------------------------------------
     // Render "Loop"
     // ------------------------------------------
-    main_camera.render(sample_scene, dest);
+    main_camera.render(sample_scene, dest, running);
+    dest.is_writing.store(true);
 }
 
 void Renderer::render_scene() {
@@ -123,8 +124,17 @@ void Renderer::render_scene() {
         return;
     }
 
-    std::thread t_render(async_render, std::ref(m_shared_image), m_image_width, m_aspect_ratio);
+    auto window_running = std::make_shared<std::atomic<bool>>(true);
+    RendererConfig config {
+        m_image_width,
+        m_aspect_ratio,
+        m_samples_per_pixel,
+        m_max_bounces,
+    };
+
+    std::thread t_render(async_render, std::ref(m_shared_image), config, window_running);
     m_main_window->launch_window_loop(m_shared_image);
+    window_running->store(false); 
 
     t_render.join();
 

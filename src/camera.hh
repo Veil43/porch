@@ -5,12 +5,17 @@
 #include "color.hh"
 #include "window.hh"
 
+#include <atomic>
+
 class Camera {
 public:
-    f64 m_aspcet_ratio = 1.0;
-    i32 m_image_width = 256;
+    f64 m_aspcet_ratio      = 1.0;
+    i32 m_image_width       = 256;
+    i32 m_samples_per_pixel = 10;
+    i32 m_max_bounces       = 10;
+
     void render(const Hittable& scene);
-    void render(const Hittable& scene, SharedData& buffer);
+    void render(const Hittable& scene, SharedData& buffer, std::shared_ptr<std::atomic<bool>> running);
 
 private:
     int m_image_height;
@@ -21,6 +26,11 @@ private:
 
     void initialize();
     color compute_ray_color(const ray& r, const Hittable& scene) const;
+    ray generate_random_ray_for_pixel(i32 x, i32 y) const;
+    /*
+        returns a point in the unit square x: [-0.5,0.5], y: [-0.5,0.5]
+    */
+    vec3 get_random_point_in_square() const; // TODO: consider moving this to the math header
 };
 
 #endif // CAMERA_HH

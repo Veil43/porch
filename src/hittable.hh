@@ -4,14 +4,17 @@
 #include "ray.hh"
 #include "math.hh"
 
+class Material;
+
 struct HitRecord {
     point3 p;
     vec3 normal; // Is always facing opposite the ray
     f64 t;
+    std::shared_ptr<Material> material;
     bool front_face;
     inline void set_face_normal(const ray& r, const vec3& outward_normal) {
         /// NOTE: we want the ray and normal to face opposite directions
-        front_face = dot(r.direction(), outward_normal);
+        front_face = dot(r.direction(), outward_normal) < 0.0;
         normal = front_face ? outward_normal : -outward_normal;
     }
 };

@@ -1,0 +1,16 @@
+{
+    "version": 10,
+    "configurePresets": [
+        {
+            "name": "Ninja Debug",
+            "description": "Build for building with ninja in debug mode",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/",
+            
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "YES"
+            }
+        }
+    ]
+}

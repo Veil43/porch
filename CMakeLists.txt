@@ -16,7 +16,8 @@ add_executable(porch src/main.cc
     src/ray.cc
     src/sphere.cc
     src/hittable_list.cc
-    src/camera.cc)
+    src/camera.cc
+    src/material.cc)
 
 # Add third-parties here
 add_subdirectory(third-party/glfw)

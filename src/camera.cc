@@ -1,5 +1,6 @@
 #include "camera.hh"
 #include "math.hh"
+#include "material.hh"
 
 void Camera::initialize() {
     /// NOTE: here width can be rounded down or height squashed to 1
@@ -24,22 +25,33 @@ void Camera::initialize() {
 }
 
 void Camera::render(const Hittable&) {}
-void Camera::render(const Hittable& scene, SharedData& dest) {
+void Camera::render(const Hittable& scene, SharedData& dest, std::shared_ptr<std::atomic<bool>> running) {
     initialize();
+
     void* buffer = dest.data;
+    f64 color_contribution_per_sample = 1.0 / m_samples_per_pixel;
+
     for (int y = 0; y < m_image_height; y++) {
-        std::lock_guard<std::mutex> lock(dest.mtx);
+        dest.is_writing.store(true);
         for (int x = 0; x < m_image_width; x++) {
             int y_inv = m_image_height - 1 - y;
             int index = y_inv*m_image_width + x;
 
-            vec3 pixel_center = m_pixel00 + (x*m_delta_u) + (y*m_delta_v);
-            vec3 ray_dir = pixel_center - m_position;
-            ray r = ray(m_position, ray_dir);
+            // -----------------------------------------
+            // Multi-sampling
+            // -----------------------------------------
+            color pixel_color(0.0,0.0,0.0);
+            for (i32 sample = 0; sample < m_samples_per_pixel; sample++) {
+                ray r = generate_random_ray_for_pixel(x, y);
+                pixel_color += compute_ray_color(r, scene);
+            }
 
-            color pixel_color = compute_ray_color(r, scene);
-
-            write_color_to_buffer(buffer, index, pixel_color);
+            write_color_to_buffer(buffer, index, pixel_color * color_contribution_per_sample);
+        }
+        dest.is_writing.store(false);
+        while(!dest.is_writing) {
+            if (!running->load()) return;
+            // wait
         }
     }
 }
@@ -47,15 +59,57 @@ void Camera::render(const Hittable& scene, SharedData& dest) {
 color Camera::compute_ray_color(const ray& r, const Hittable& scene) const {
     using math::Interval;
 
-    HitRecord record;
-    // if hit color-in the normal else color in the sky
-    bool hit_success = scene.hit(r, Interval(0.0, math::infinity), record);
-    if (hit_success) {
-        color object_color = 0.5 * (record.normal + color(1.0));
-        return object_color;
-    }
+    color output_color = color(1.0);
+    f64 reflectance = 0.5;
 
-    vec3 unit_ray_direction = unit_vector(r.direction());
-    auto t = 0.5 * (unit_ray_direction.y + 1.0);
-    return math::lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), t);
+    ray current_ray = r;
+    for (int i = 0; i < m_max_bounces; i++) {
+        HitRecord record;
+        bool hit_success = scene.hit(current_ray, Interval(0.001, math::infinity), record);
+        if (hit_success) {
+            color attenuation;
+            ray scattered_ray;
+            if (record.material->scatter(current_ray, record, attenuation, scattered_ray)) {
+                output_color = output_color * attenuation * reflectance;
+                current_ray = scattered_ray;
+            } else {
+                // we couldn't scatter
+                break;
+            }
+
+        } else {
+            vec3 unit_ray_direction = unit_vector(current_ray.direction());
+            auto t = 0.5 * (unit_ray_direction.y + 1.0);
+            color sky = math::lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), t);
+            return linear_to_gamma(output_color * sky);
+        }
+    }
+    
+    return color(0.0);
+    // HitRecord record;
+    // bool hit_success = scene.hit(r, Interval(0.0, math::infinity), record);
+    // if (hit_success) {
+    //     vec3 direction = math::generate_random_vector_on_hemisphere(record.normal);
+    //     color object_color = 0.5 * compute_ray_color(ray(record.p, direction), scene);
+    //     return object_color;
+    // }
+
+    // vec3 unit_ray_direction = unit_vector(r.direction());
+    // auto t = 0.5 * (unit_ray_direction.y + 1.0);
+    // return math::lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), t);
+}
+
+ray Camera::generate_random_ray_for_pixel(i32 x, i32 y) const {
+    vec3 offset = get_random_point_in_square();
+    vec3 pixel_sample = m_pixel00 
+                        + (offset.x + x) * m_delta_u
+                        + (offset.y + y) * m_delta_v;
+    vec3 ray_origin = m_position;
+    vec3 ray_direction = pixel_sample - ray_origin;
+
+    return ray(ray_origin, ray_direction);
+}
+
+vec3 Camera::get_random_point_in_square() const {
+    return vec3(math::randf64() - 0.5, math::randf64() - 0.5, 0.0);
 }

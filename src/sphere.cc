@@ -1,12 +1,12 @@
 #include "sphere.hh"
 
-Sphere::Sphere(const point3& center, f64 radius) 
-    : m_center{center}, m_radius{std::fmax(0.0,radius)}
+Sphere::Sphere(const point3& center, f64 radius, std::shared_ptr<Material> material) 
+    : m_center{center}, m_radius{std::fmax(0.0,radius)}, m_material{material}
 {}
 
 bool Sphere::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
     
-
+    /// NOTE: h = 2b
     vec3 oc = m_center - r.origin();
     f64 a = r.direction().length_squared();
     f64 h = dot(r.direction(), oc);
@@ -32,5 +32,7 @@ bool Sphere::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
     // Rember for a sphere unit Normal N at point P is N = (P-C)/r (draw to understand)
     vec3 normal = (record.p - m_center) / m_radius;
     record.set_face_normal(r, normal);
+    record.material = m_material;
+
     return true;
 }

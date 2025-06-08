@@ -20,7 +20,9 @@ public:
     f32 m_image_width = DEFAULT_WINDOW_WIDTH;
     f32 m_aspect_ratio = DEFAULT_WINDOW_ASPECT_RATIO;
     std::string m_image_name = DEFAULT_WINDOW_NAME;
-
+    i32 m_samples_per_pixel = 10;
+    i32 m_max_bounces = 10;
+    
     Renderer(f32 width = DEFAULT_WINDOW_WIDTH, f32 aspect_ratio = DEFAULT_WINDOW_ASPECT_RATIO, const std::string& image_name = DEFAULT_WINDOW_NAME);
     ~Renderer();
 

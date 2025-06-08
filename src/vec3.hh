@@ -26,6 +26,7 @@ public:
     vec3& operator/=(f64 t);
     f64 length() const;
     f64 length_squared() const;
+    bool near_zero() const;
 };
 
 using point3 = vec3;
