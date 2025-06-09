@@ -19,6 +19,9 @@ public:
     void clear();
     void add(shared_ptr<Hittable> object);
     bool hit(const ray& r, math::Interval ray_t, HitRecord& record) const override;
+    AABB bounding_box() const override;
+private:
+    AABB m_bbox;
 };
 
 #endif // HITTABLE_LIST_HH

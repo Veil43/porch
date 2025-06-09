@@ -10,6 +10,7 @@ void HittableList::clear() {
 }
 void HittableList::add(shared_ptr<Hittable> object) {
     m_objects.push_back(object);
+    m_bbox = AABB(m_bbox, object->bounding_box());
 }
 /// NOTE: Here it is! here's where all the spacial optimizations occur.
 /// Linearly searching through list is quite expensive. BVHs come in later.
@@ -28,4 +29,8 @@ bool HittableList::hit(const ray& r, math::Interval ray_t, HitRecord& record) co
         }
     }
     return hit_anything;
+}
+
+AABB HittableList::bounding_box() const {
+    return m_bbox;
 }

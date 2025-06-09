@@ -3,6 +3,7 @@
 
 #include "ray.hh"
 #include "math.hh"
+#include "aabb.hh"
 
 class Material;
 
@@ -23,6 +24,7 @@ class Hittable {
 public:
     virtual ~Hittable() = default;
     virtual bool hit(const ray& r, math::Interval ray_t, HitRecord& record) const = 0;
+    virtual AABB bounding_box() const = 0;
 };
 
 #endif // HITTABLE_HH

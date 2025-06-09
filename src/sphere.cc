@@ -2,7 +2,10 @@
 
 Sphere::Sphere(const point3& center, f64 radius, std::shared_ptr<Material> material) 
     : m_center{center}, m_radius{std::fmax(0.0,radius)}, m_material{material}
-{}
+{
+    vec3 radius_vector = vec3(m_radius);
+    m_bbox = AABB(center - radius_vector, center + radius_vector);
+}
 
 bool Sphere::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
     
@@ -35,4 +38,8 @@ bool Sphere::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
     record.material = m_material;
 
     return true;
+}
+
+AABB Sphere::bounding_box() const {
+    return m_bbox;
 }

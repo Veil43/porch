@@ -11,6 +11,17 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "YES"
             }
+        },
+        {
+            "name": "Ninja Release",
+            "description": "Build for building with ninja in release mode",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/release/",
+            
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "YES"
+            }
         }
     ]
 }

@@ -14,12 +14,19 @@ int main(int argc, char** argv) {
 #endif 
 
     Renderer porch{};
-    porch.m_image_width = 800.0;
-    porch.m_aspect_ratio = 16.0/9.0;
-    porch.m_samples_per_pixel = 100.0;
-    porch.m_max_bounces = 50.0;
-
+    porch.m_window_width = 800.0;
+    porch.m_window_aspect_ratio = 16.0/9.0;
     porch.m_image_name = "Porch";
+    porch.m_config.image_aspect_ratio = 16.0/9.0;
+    porch.m_config.image_width = 600.0;
+    porch.m_config.samples_per_pixel = 50.0;
+    porch.m_config.max_bounces = 25.0;
+    porch.m_config.cam_pos = vec3(-1.0,4.0,1.0);
+    porch.m_config.cam_target = vec3(0.0,0.0,-1.0);
+    porch.m_config.cam_vfov = 20.0;
+    porch.m_config.cam_defocus_angle = 10.0;
+    porch.m_config.cam_focus_distance = 5.4;
+
     if (porch.create_canvas(true)) {
         porch.render_scene();
     } else {

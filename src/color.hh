@@ -4,6 +4,7 @@
 #include "vec3.hh"
 
 using color = vec3;
+struct rgb8 { u8 r, g, b; };
 
 void write_color_to_out(std::ostream& out, const color& pixel_color);
 void write_color_to_buffer(void* buffer, size_t index, const color& pixel_color);
