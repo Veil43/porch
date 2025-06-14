@@ -229,11 +229,16 @@ void Window::launch_window_loop(SharedData& source) {
         // ----------------------------------------------------
         // Request image from owner else don't make a new draw
         // ----------------------------------------------------
+#define ALLOW_UB // remove attomic sync
+#ifdef ALLOW_UB
+        std::memcpy(image.data, source.data, size);
+        source.is_writing = true; // release this so the renderer can keep drawing
+#else 
         if (!source.is_writing.load()) {
             std::memcpy(image.data, source.data, size);
             source.is_writing = true; // release this so the renderer can keep drawing
         }
-
+#endif
         if (image.data) {
             m_texture_id = load_image_to_gpu(image, m_shader, 1, "canvas");
             GL_QUERY_ERROR(glClearColor(0.0, 0.0, 0.0, 1.0);)

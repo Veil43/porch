@@ -1,18 +1,10 @@
 // renderer.cc
-// by Reuel Nkomo 2025
 #include "renderer.hh"
 #include "window.hh"
 #include "vec3.hh"
-#include "color.hh"
-#include "ray.hh"
-#include "math.hh"
-#include "sphere.hh"
-#include "hittable.hh"
 #include "hittable_list.hh"
 #include "camera.hh"
-#include "material.hh"
 #include "bvh.hh"
-#include "color.hh"
 
 #include <iostream>
 #include <thread>
@@ -33,7 +25,7 @@ bool Renderer::create_canvas(bool resizable) {
 
     switch (m_img_dst) {
         case eImgDest::kScreen: {
-            m_main_window = std::make_unique<Window>(static_cast<u32>(m_window_width), height, m_image_name, resizable);
+            m_main_window = std::make_unique<Window>(static_cast<u32>(m_window_width), height, m_window_name, resizable);
             if (m_main_window) {
                 m_valid_destination = m_main_window->create_opengl_window();
                 return m_valid_destination;
@@ -56,19 +48,19 @@ bool Renderer::create_canvas(bool resizable) {
     return false;
 }
 
-static i64 async_render(SharedData& dest, RendererConfig config, std::shared_ptr<std::atomic<bool>> running) {
-    if (config.image_aspect_ratio <= 0.0) {
-        std::cerr << "Error::Renderer: cannot render an image with aspect ratio: " << config.image_aspect_ratio << "\n";
+static i64 async_render(SharedData& dest, Scene scene, std::shared_ptr<std::atomic<bool>> running) {
+    if (scene.config.image_aspect_ratio <= 0.0) {
+        std::cerr << "Error::Renderer: cannot render an image with aspect ratio: " << scene.config.image_aspect_ratio << "\n";
         return 0;
     }
 
-    if (config.image_width <= 0.0) {
-        std::cerr << "Error::Renderer: cannot render an image with width: " << config.image_width << "\n";
+    if (scene.config.image_width <= 0.0) {
+        std::cerr << "Error::Renderer: cannot render an image with width: " << scene.config.image_width << "\n";
         return 0;
     }
 
-    i32 image_width = config.image_width;
-    i32 image_height = i32(image_width/config.image_aspect_ratio);
+    i32 image_width = scene.config.image_width;
+    i32 image_height = i32(image_width/scene.config.image_aspect_ratio);
     image_height = (image_height < 1)? 1 : image_height;
     
     // ------------------------------------------
@@ -89,43 +81,46 @@ static i64 async_render(SharedData& dest, RendererConfig config, std::shared_ptr
     // ------------------------------------------
     // Sample Scene
     // ------------------------------------------
+    /*
     HittableList sample_scene;
-
+    
     auto material_ground = make_shared<Lambertian>(color(0.8, 0.8, 0.0));
     auto material_center = make_shared<Lambertian>(color(0.1, 0.2, 0.5));
     auto material_left   = make_shared<Metal>(color(0.8, 0.8, 0.8), 1.0);
     auto material_right  = make_shared<Dielectric>(1.0/1.5);
-
+    
     sample_scene.add(make_shared<Sphere>(point3(0.0,-100.5,-1.0), 100.0, material_ground));
     sample_scene.add(make_shared<Sphere>(point3(0.0,0.0,-1.2), 0.5, material_center));
     sample_scene.add(make_shared<Sphere>(point3(-1.0,0.0,-1.0), 0.5, material_left));
     sample_scene.add(make_shared<Sphere>(point3( 1.0,0.0,-1.0), 0.5, material_right));
+    */
+    HittableList scene_to_render = scene.hittables;
     
     // ------------------------------------------
     // build a BVH
     // ------------------------------------------
-    sample_scene = HittableList(make_shared<BVHNode>(sample_scene));
+    scene_to_render = HittableList(make_shared<BVHNode>(scene_to_render));
 
     // ------------------------------------------
     // Camera Config
     // ------------------------------------------
     Camera main_camera{};
-    main_camera.m_aspcet_ratio = config.image_aspect_ratio;
-    main_camera.m_image_width = config.image_width;
-    main_camera.m_samples_per_pixel = config.samples_per_pixel;
-    main_camera.m_max_bounces = config.max_bounces;
-    main_camera.m_vfov = config.cam_vfov;
-    main_camera.m_position = config.cam_pos;
-    main_camera.m_target = config.cam_target;
-    main_camera.m_world_up = config.cam_world_up;
-    main_camera.m_defocus_angle = config.cam_defocus_angle;
-    main_camera.m_focus_distance = config.cam_focus_distance;
+    main_camera.m_aspcet_ratio = scene.config.image_aspect_ratio;
+    main_camera.m_image_width = scene.config.image_width;
+    main_camera.m_samples_per_pixel = scene.config.samples_per_pixel;
+    main_camera.m_max_bounces = scene.config.max_bounces;
+    main_camera.m_vfov = scene.config.cam_vfov;
+    main_camera.m_position = scene.config.cam_pos;
+    main_camera.m_target = scene.config.cam_target;
+    main_camera.m_world_up = scene.config.cam_world_up;
+    main_camera.m_defocus_angle = scene.config.cam_defocus_angle;
+    main_camera.m_focus_distance = scene.config.cam_focus_distance;
     
     // ------------------------------------------
     // Render "Loop"
     // ------------------------------------------
     auto start_time = std::chrono::high_resolution_clock::now();
-    main_camera.render(sample_scene, dest, running);
+    main_camera.render(scene_to_render, dest, running);
     auto end_time = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -134,20 +129,20 @@ static i64 async_render(SharedData& dest, RendererConfig config, std::shared_ptr
     return duration.count();
 }
 
-void Renderer::render_scene() {
+void Renderer::render_scene(Scene scene) {
     if (!m_valid_destination) {
         std::cerr << "Error: cannot render without a valid destination!\n";
         return;
     }
 
-    m_shared_image.width = m_config.image_width;
-    m_shared_image.height = m_config.image_width / m_config.image_aspect_ratio;
+    m_shared_image.width = scene.config.image_width;
+    m_shared_image.height = scene.config.image_width / scene.config.image_aspect_ratio;
     m_shared_image.channel_count = 3;
     m_shared_image.data = nullptr;
 
     auto window_running = std::make_shared<std::atomic<bool>>(true);
 
-    std::thread t_render(async_render, std::ref(m_shared_image), m_config, window_running);
+    std::thread t_render(async_render, std::ref(m_shared_image), scene, window_running);
     m_main_window->launch_window_loop(m_shared_image);
     window_running->store(false); 
 

@@ -12,6 +12,8 @@ struct HitRecord {
     vec3 normal; // Is always facing opposite the ray
     f64 t;
     std::shared_ptr<Material> material;
+    f64 u;
+    f64 v;
     bool front_face;
     inline void set_face_normal(const ray& r, const vec3& outward_normal) {
         /// NOTE: we want the ray and normal to face opposite directions

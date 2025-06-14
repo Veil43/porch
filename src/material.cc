@@ -1,7 +1,10 @@
 #include "material.hh"
 
 Lambertian::Lambertian(const color& albedo) 
-    : m_albedo{albedo}
+    : m_texture{std::make_shared<SolidColor>(albedo)}
+{}
+Lambertian::Lambertian(std::shared_ptr<Texture> texture) 
+    : m_texture{texture}
 {}
 
 bool Lambertian::scatter (
@@ -25,7 +28,7 @@ bool Lambertian::scatter (
     }
 
     scattered = ray(record.p, scatter_direction);
-    attenuation = m_albedo;
+    attenuation = m_texture->value(record.u, record.v, record.p);
     return true; // why are we returning anything??
 }
 

@@ -2,6 +2,7 @@
 
 #include "hittable.hh"
 #include "color.hh"
+#include "texture.hh"
 
 class Material {
 public:
@@ -20,6 +21,7 @@ public:
 class Lambertian : public Material {
 public:
     Lambertian(const color& albedo);
+    Lambertian(std::shared_ptr<Texture> texture);
     bool scatter (
         const ray& r_in,
         const HitRecord& record,
@@ -28,7 +30,7 @@ public:
     ) const override;
 
 private:
-    color m_albedo;
+    std::shared_ptr<Texture> m_texture;
 };
 
 class Metal : public Material {

@@ -61,3 +61,11 @@ bool AABB::hit(const ray& r, math::Interval ray_t) const {
 
     return true; // we overlapped
 }
+
+i32 AABB::longest_axis() const {
+    if (m_x_bounds.size() > m_y_bounds.size()) {
+        return m_x_bounds.size() > m_z_bounds.size() ? 0 : 2;
+    } else {
+        return m_y_bounds.size() > m_z_bounds.size() ? 1 : 2;
+    }
+}

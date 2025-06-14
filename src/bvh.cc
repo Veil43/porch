@@ -5,8 +5,15 @@ BVHNode::BVHNode(HittableList list)
 {}
 
 BVHNode::BVHNode(std::vector<shared_ptr<Hittable>>& objects, size_t start, size_t end) {
-    int axis = math::randi32(0,2);
-    /// NOTE: here we are choosing a random asis to devide the our objects along
+    
+    m_bbox = AABB::empty;
+    /// NOTE: Concatinate the bounding boxes to find the span
+    for (size_t object_index = start; object_index < end; object_index++) {
+        m_bbox = AABB(m_bbox, objects[object_index]->bounding_box());
+    }
+    
+    i32 axis = m_bbox.longest_axis(); 
+    /// NOTE: We split along the longest axis
     auto comparator = (axis == 0) ? box_x_compare
                     : (axis == 1) ? box_y_compare
                                   : box_z_compare;
@@ -29,7 +36,7 @@ BVHNode::BVHNode(std::vector<shared_ptr<Hittable>>& objects, size_t start, size_
         m_right = make_shared<BVHNode>(objects, mid, end);
     }
 
-    m_bbox = AABB(m_left->bounding_box(), m_right->bounding_box());
+    // m_bbox = AABB(m_left->bounding_box(), m_right->bounding_box());
 }
 
 bool BVHNode::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {

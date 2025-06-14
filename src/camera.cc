@@ -42,8 +42,13 @@ void Camera::render(const Hittable& scene, SharedData& dest, std::shared_ptr<std
     void* buffer = dest.data;
     f64 color_contribution_per_sample = 1.0 / m_samples_per_pixel;
 
+#define ALLOW_UB
+
+    dest.is_writing.store(false);
     for (int y = 0; y < m_image_height; y++) {
+#ifndef ALLOW_UB
         dest.is_writing.store(true);
+#endif
         for (int x = 0; x < m_image_width; x++) {
             int y_inv = m_image_height - 1 - y;
             int index = y_inv*m_image_width + x;
@@ -59,11 +64,15 @@ void Camera::render(const Hittable& scene, SharedData& dest, std::shared_ptr<std
 
             write_color_to_buffer(buffer, index, pixel_color * color_contribution_per_sample);
         }
+#ifndef ALLOW_UB
         dest.is_writing.store(false);
         while(!dest.is_writing) {
             if (!running->load()) return;
             // wait
         }
+#else 
+        if (!running->load()) return;
+#endif
     }
 }
 
