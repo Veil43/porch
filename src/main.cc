@@ -132,9 +132,6 @@ public:
     utils::Image render_image(Scene scene, const std::string& name) {
         utils::Image output_image = scene.camera.render(scene.hittables);
         output_image.name = name;
-
-        utils::write_image_to_file(output_image);
-
         return output_image;
     }
 };
@@ -143,10 +140,11 @@ int main(int argc, char** argv) {
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif 
-    auto scene = get_world(400, 100, 50);
+    auto scene = get_world(250, 10, 10);
     
     Renderer porch = {};
-    porch.render_image(scene, "test-image");
+    auto image = porch.render_image(scene, "test-image");
+    utils::write_image_to_file(image, "../out/", utils::eImageFormat::kPNG);
 
     return 0;
 }

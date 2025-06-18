@@ -45,7 +45,25 @@ Image load_image_from_file(const std::string& path, u32 n_channels, bool should_
 
 
 void write_ppm3(const Image& image, std::filesystem::path path) {
-    
+    std::string name = path.string() + image.name + ".ppm3";
+
+    std::ofstream file(name);
+
+    if (!file.is_open()) {
+        std::cerr << "Error could not open file: " << name << "\n";
+        return;
+    }
+
+    file << "P3\n";
+    file << image.width << " " << image.height << "\n";
+
+    file << "255\n";
+
+    for (size_t i = 0; i < image.size; i+=3) {
+        file << std::to_string((unsigned int)image.buffer[i])     << " "
+             << std::to_string((unsigned int)image.buffer[i + 1]) << " "
+             << std::to_string((unsigned int)image.buffer[i + 2]) << "\n";
+    }
 }
 
 void write_image_to_file(const Image& image, std::filesystem::path path, eImageFormat format) {
@@ -53,13 +71,16 @@ void write_image_to_file(const Image& image, std::filesystem::path path, eImageF
     std::string name = path.string() + image.name;
     switch (format) {
         case eImageFormat::kPPM6: {
+            name += ".ppm6";
             stbi_write_bmp(name.c_str(), image.width, image.height, image.channel_count, image.buffer);
         } break;
         case eImageFormat::kJPG: {
+            name += ".jpg";
             stbi_write_jpg(name.c_str(), image.width, image.height, image.channel_count, image.buffer, 100);
         } break;
         case eImageFormat::kPNG: {
-            stbi_write_png(name.c_str(), image.width, image.height, image.channel_count, image.buffer, image.bytes_per_channel * image.channel_count);
+            name += ".png";
+            stbi_write_png(name.c_str(), image.width, image.height, image.channel_count, image.buffer, image.bytes_per_channel * image.channel_count * image.width);
         } break;
         default: {
             write_ppm3(image, path);

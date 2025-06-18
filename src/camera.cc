@@ -52,9 +52,9 @@ utils::Image Camera::render(const Hittable& scene) {
     f64 color_contribution_per_sample = 1.0 / m_samples_per_pixel;
 
     for (int y = 0; y < m_image_height; y++) {
+        std::clog << "\rScanlines remaining: " << (m_image_height - y) << ' ' << std::flush;
         for (int x = 0; x < m_image_width; x++) {
-            int y_inv = m_image_height - 1 - y;
-            int index = y_inv*m_image_width + x;
+            int index = y*m_image_width + x;
 
             // -----------------------------------------
             // Multi-sampling
@@ -68,6 +68,7 @@ utils::Image Camera::render(const Hittable& scene) {
             write_color_to_buffer(buffer, index, pixel_color * color_contribution_per_sample);
         }
     }
+    std::clog << "\rDone.                 \n";
     return output_image;
 }
 

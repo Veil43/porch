@@ -14,20 +14,14 @@
     #define _DEBUG_BREAK __builtin_trap();
 #endif
 
-#define GL_QUERY_ERROR(glFunction)                                                          \
-    glFunction                                                                              \
-    for (unsigned int err__ = glGetError(); err__ != GL_NO_ERROR; err__ = glGetError()) {   \
-        std::cerr << "ERROR::OPENGL: 0x" << std::hex << err__ << std::dec                   \
-                  << " in file: " << __FILE__ << " at line: " << __LINE__;                  \
-        _DEBUG_BREAK                                                                        \
-    }
 
 #define ASSERT(expr) \
     if (!(expr)) {_DEBUG_BREAK}
 #else
-#define GL_QUERY_ERROR(glFunction) \
-    glFunction
+
+#define _DEBUG_BREAK
 #define ASSERT(expr)
+
 #endif // PORCH_DEBUG
 
 
