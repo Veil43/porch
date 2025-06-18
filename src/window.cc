@@ -73,7 +73,7 @@ static u32 create_shader(const std::string& vpath, const std::string& fpath) {
     return shader;
 }
 
-static u32 load_image_to_gpu(utils::ImageData image, u32 shader, u32 texture_unit, const char* uniform) {
+static u32 load_image_to_gpu(utils::Image image, u32 shader, u32 texture_unit, const char* uniform) {
     u32 id;
     GL_QUERY_ERROR(glGenTextures(1, &id);)
     GL_QUERY_ERROR(glBindTexture(GL_TEXTURE_2D, id);)
@@ -85,8 +85,8 @@ static u32 load_image_to_gpu(utils::ImageData image, u32 shader, u32 texture_uni
 
     u32 internal_format = (image.channel_count == 3) ? GL_RGB8 : GL_RGBA8;
 
-    if (image.data != nullptr) {
-        GL_QUERY_ERROR(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, (void*)image.data);)
+    if (image.buffer != nullptr) {
+        GL_QUERY_ERROR(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, (void*)image.buffer);)
         GL_QUERY_ERROR(glGenerateMipmap(GL_TEXTURE_2D);)
     }
 
@@ -215,12 +215,12 @@ void Window::launch_window_loop(SharedData& source) {
     // -----------------------------
     f64 last_time = glfwGetTime();
     GLFWwindow* window = (GLFWwindow*) m_window_handle;
-    utils::ImageData image = {};
+    utils::Image image = {};
     image.width = source.width;
     image.height = source.height;
     image.channel_count = source.channel_count;
     size_t size = image.width * image.height * image.channel_count;
-    image.data = new u8[size];
+    image.buffer = new u8[size];
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -231,7 +231,7 @@ void Window::launch_window_loop(SharedData& source) {
         // ----------------------------------------------------
 #define ALLOW_UB // remove attomic sync
 #ifdef ALLOW_UB
-        std::memcpy(image.data, source.data, size);
+        std::memcpy(image.buffer, source.data, size);
         source.is_writing = true; // release this so the renderer can keep drawing
 #else 
         if (!source.is_writing.load()) {
@@ -239,7 +239,7 @@ void Window::launch_window_loop(SharedData& source) {
             source.is_writing = true; // release this so the renderer can keep drawing
         }
 #endif
-        if (image.data) {
+        if (image.buffer) {
             m_texture_id = load_image_to_gpu(image, m_shader, 1, "canvas");
             GL_QUERY_ERROR(glClearColor(0.0, 0.0, 0.0, 1.0);)
             GL_QUERY_ERROR(glClear(GL_COLOR_BUFFER_BIT);)
@@ -266,8 +266,8 @@ void Window::launch_window_loop(SharedData& source) {
         }
         last_time = glfwGetTime();
     }
-    if (image.data) {
-        delete[] image.data;
+    if (image.buffer) {
+        delete[] image.buffer;
     }
     GL_QUERY_ERROR(glDeleteProgram(m_shader);)
 }

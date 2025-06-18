@@ -1,8 +1,3 @@
-#include "renderer.hh"
-#include "camera.hh"
-#include "material.hh"
-#include "sphere.hh"
-
 #include <iostream>
 
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
@@ -10,6 +5,16 @@
     #include <cstdlib>
     #include <crtdbg.h>
 #endif
+
+#include "hittable_list.hh"
+#include "camera.hh"
+#include "material.hh"
+#include "sphere.hh" 
+
+struct Scene {
+    HittableList hittables;
+    Camera camera;
+};
 
 Scene get_world(i32 resolution, i32 spp, i32 max_bounces) {
     auto left = point3(-1.0, 0.0, -1.0);
@@ -42,21 +47,21 @@ Scene get_world(i32 resolution, i32 spp, i32 max_bounces) {
     world.add(default_right_sphere);
 	world.add(default_left_bubble);
 
-	RendererConfig config;
+	Camera main_camera;
 
-	config.image_width = resolution;
-	config.image_aspect_ratio = 16.0 / 9.0;
-	config.samples_per_pixel = spp;
-	config.max_bounces = max_bounces;
-	config.cam_vfov = 90;
-	config.cam_defocus_angle = 0.0;
-	config.cam_focus_distance = 3.4;
-	config.cam_pos = point3(0.0);
-	config.cam_target = point3(0.0,0.0,-1.0);
-	config.cam_world_up = vec3(0, 1, 0);
-	config.cam_background = color(0.70, 0.80, 1.00);
+	main_camera.m_image_width = resolution;
+	main_camera.m_image_aspect_ratio = 16.0 / 9.0;
+	main_camera.m_samples_per_pixel = spp;
+	main_camera.m_max_bounces = max_bounces;
+	main_camera.m_vfov = 90;
+	main_camera.m_defocus_angle = 0.0;
+	main_camera.m_focus_distance = 3.4;
+	main_camera.m_position = point3(0.0);
+	main_camera.m_target = point3(0.0,0.0,-1.0);
+	main_camera.m_world_up = vec3(0, 1, 0);
+	main_camera.m_background = color(0.70, 0.80, 1.00);
 
-	return Scene{world, config};
+	return Scene{world, main_camera};
 }
 
 Scene rtweekend1(i32 resolution = 1200, i32 spp = 500, i32 max_bounces = 50) {
@@ -103,42 +108,45 @@ Scene rtweekend1(i32 resolution = 1200, i32 spp = 500, i32 max_bounces = 50) {
     auto material3 = make_shared<Metal>(color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<Sphere>(point3(4, 1, 0), 1.0, material3));
 
-    RendererConfig config;
+    Camera main_camera;
 
-    config.image_aspect_ratio       = 16.0 / 9.0;
-    config.image_width              = resolution;
-    config.samples_per_pixel        = spp;
-    config.max_bounces              = max_bounces;
+    main_camera.m_image_aspect_ratio       = 16.0 / 9.0;
+    main_camera.m_image_width              = resolution;
+    main_camera.m_samples_per_pixel        = spp;
+    main_camera.m_max_bounces              = max_bounces;
 
-    config.cam_vfov                 = 20;
-    config.cam_pos                  = point3(13,2,3);
-    config.cam_target               = point3(0,0,0);
-    config.cam_world_up             = vec3(0,1,0);
+    main_camera.m_vfov                 = 20;
+    main_camera.m_position                  = point3(13,2,3);
+    main_camera.m_target               = point3(0,0,0);
+    main_camera.m_world_up             = vec3(0,1,0);
 
-    config.cam_defocus_angle        = 0.6;
-    config.cam_focus_distance       = 10.0;
+    main_camera.m_defocus_angle        = 0.6;
+    main_camera.m_focus_distance       = 10.0;
 
-    return Scene{world, config};
+    return Scene{world, main_camera};
 }
+
+
+class Renderer {
+public:
+    utils::Image render_image(Scene scene, const std::string& name) {
+        utils::Image output_image = scene.camera.render(scene.hittables);
+        output_image.name = name;
+
+        utils::write_image_to_file(output_image);
+
+        return output_image;
+    }
+};
 
 int main(int argc, char** argv) {
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif 
-
-    Renderer porch{};
-
-    auto scene = rtweekend1(400, 100, 50);
-
-    porch.m_window_width = 1.5f*scene.config.image_width;
-    porch.m_window_aspect_ratio = scene.config.image_aspect_ratio;
-    porch.m_window_name = "Porch";
- 
-    if (porch.create_canvas(true)) {
-        porch.render_scene(scene);
-    } else {
-        std::cerr << "Could not create a render canvas!\n";
-    }
+    auto scene = get_world(400, 100, 50);
+    
+    Renderer porch = {};
+    porch.render_image(scene, "test-image");
 
     return 0;
 }

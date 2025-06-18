@@ -5,7 +5,7 @@
 void Camera::initialize() {
     /// NOTE: here width can be rounded down or height squashed to 1
     /// Thus we have to recalculate viewport ar to match the target image
-    m_image_height = i32(m_image_width/m_aspcet_ratio);
+    m_image_height = i32(m_image_width/m_image_aspect_ratio);
     m_image_height = (m_image_height < 1)? 1 : m_image_height;
 
     f64 theta = math::radians(m_vfov);
@@ -35,20 +35,23 @@ void Camera::initialize() {
     m_defocus_disk_v = vv * defocus_disk_radius;
 }
 
-void Camera::render(const Hittable&) {}
-void Camera::render(const Hittable& scene, SharedData& dest, std::shared_ptr<std::atomic<bool>> running) {
+utils::Image Camera::render(const Hittable& scene) {
     initialize();
 
-    void* buffer = dest.data;
+    utils::Image output_image = {};
+    output_image.width = m_image_width;
+    output_image.height = m_image_height;
+    output_image.bytes_per_channel = 1;
+    output_image.channel_count = 3;
+    output_image.size = output_image.bytes_per_channel * output_image.channel_count *
+                        output_image.width *
+                        output_image.height;
+    output_image.buffer = new u8[output_image.size];
+    void* buffer = (void*)output_image.buffer;
+
     f64 color_contribution_per_sample = 1.0 / m_samples_per_pixel;
 
-#define ALLOW_UB
-
-    dest.is_writing.store(false);
     for (int y = 0; y < m_image_height; y++) {
-#ifndef ALLOW_UB
-        dest.is_writing.store(true);
-#endif
         for (int x = 0; x < m_image_width; x++) {
             int y_inv = m_image_height - 1 - y;
             int index = y_inv*m_image_width + x;
@@ -64,16 +67,8 @@ void Camera::render(const Hittable& scene, SharedData& dest, std::shared_ptr<std
 
             write_color_to_buffer(buffer, index, pixel_color * color_contribution_per_sample);
         }
-#ifndef ALLOW_UB
-        dest.is_writing.store(false);
-        while(!dest.is_writing) {
-            if (!running->load()) return;
-            // wait
-        }
-#else 
-        if (!running->load()) return;
-#endif
     }
+    return output_image;
 }
 
 color Camera::compute_ray_color(const ray& r, const Hittable& scene) const {
