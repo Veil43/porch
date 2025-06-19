@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif 
-    auto scene = sample_scene(800, 100, 50, "Sample_Scene.w800s100b50");
+    auto scene = rtweekend1(1200, 500, 50, "rtweekend1.w1200s500b50");
     
     Renderer porch = {};
     auto image = porch.render_image(scene, scene.name, true);

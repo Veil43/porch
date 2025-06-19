@@ -2,6 +2,8 @@
 #include "math.hh"
 #include "material.hh"
 
+#include <iostream>
+
 void Camera::initialize() {
     /// NOTE: here width can be rounded down or height squashed to 1
     /// Thus we have to recalculate viewport ar to match the target image
