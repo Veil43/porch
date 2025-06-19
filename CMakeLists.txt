@@ -17,7 +17,8 @@ add_executable(porch src/main.cc
     src/material.cc
     src/aabb.cc
     src/bvh.cc
-    src/texture.cc)
+    src/texture.cc
+    src/quad.cc)
 
 # Add third-parties here
 target_include_directories(porch PRIVATE third-party/stb/)

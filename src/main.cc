@@ -12,6 +12,7 @@
 #include "material.hh"
 #include "sphere.hh" 
 #include "bvh.hh"
+#include "quad.hh"
 
 struct Scene {
     std::string name;
@@ -139,6 +140,46 @@ Scene rtweekend1(i32 width, i32 spp, i32 max_bounces, const std::string& name = 
 	return output_scene;
 }
 
+Scene quads(i32 width, i32 spp, i32 max_bounces, const std::string& name = "quads") {
+    HittableList world;
+
+    // Materials
+    auto left_red     = make_shared<Lambertian>(color(1.0, 0.2, 0.2));
+    auto back_green   = make_shared<Lambertian>(color(0.2, 1.0, 0.2));
+    auto right_blue   = make_shared<Lambertian>(color(0.2, 0.2, 1.0));
+    auto upper_orange = make_shared<Lambertian>(color(1.0, 0.5, 0.0));
+    auto lower_teal   = make_shared<Lambertian>(color(0.2, 0.8, 0.8));
+
+    // Quads
+    world.add(std::make_shared<Quad>(point3(-3,-2, 5), vec3(0, 0,-4), vec3(0, 4, 0), left_red));
+    world.add(std::make_shared<Quad>(point3(-2,-2, 0), vec3(4, 0, 0), vec3(0, 4, 0), back_green));
+    world.add(std::make_shared<Quad>(point3( 3,-2, 1), vec3(0, 0, 4), vec3(0, 4, 0), right_blue));
+    world.add(std::make_shared<Quad>(point3(-2, 3, 1), vec3(4, 0, 0), vec3(0, 0, 4), upper_orange));
+    world.add(std::make_shared<Quad>(point3(-2,-3, 5), vec3(4, 0, 0), vec3(0, 0,-4), lower_teal));
+
+    Camera cam;
+
+    cam.m_image_aspect_ratio    = 1.0;
+    cam.m_image_width           = width;
+    cam.m_samples_per_pixel     = spp;
+    cam.m_max_bounces           = max_bounces;
+
+    cam.m_vfov     = 80;
+    cam.m_position = point3(0,0,9);
+    cam.m_target   = point3(0,0,0);
+    cam.m_world_up = vec3(0,1,0);
+
+    cam.m_defocus_angle  = 0;
+    // cam.m_focus_distance = 10.0;
+    
+    Scene output_scene = {};
+
+    output_scene.name = name;
+    output_scene.camera = cam;
+    output_scene.hittables = world;
+
+    return output_scene;
+}
 
 class Renderer {
 public:
@@ -166,11 +207,16 @@ int main(int argc, char** argv) {
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif 
-    auto scene = rtweekend1(1200, 500, 50, "rtweekend1.w1200s500b50");
-    
+    Scene scene = quads(800, 100, 50, "quads.w800s100b50");
+
     Renderer porch = {};
     auto image = porch.render_image(scene, scene.name, true);
     utils::write_image_to_file(image, "../out/", utils::eImageFormat::kPNG);
 
+#ifdef PORCH_DEBUG
+    std::cout << "Rays parallel: " << parallel_to_plane << "\n";
+    std::cout << "Rays too close: " << too_close_to_plane << "\n";
+    std::cout << "Rays outside quad: " << outside_quad << "\n";
+#endif
     return 0;
 }

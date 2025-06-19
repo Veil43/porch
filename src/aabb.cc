@@ -3,18 +3,22 @@
 AABB::AABB() {}
 AABB::AABB(const math::Interval& x, const math::Interval& y, const math::Interval& z) 
     : m_x_bounds{x}, m_y_bounds{y}, m_z_bounds{z}
-{}
+{
+    pad_to_minimums();
+}
 
 AABB::AABB(const point3& min, const point3& max) {
     m_x_bounds = math::Interval(std::fmin(min.x, max.x), std::fmax(min.x, max.x));
     m_y_bounds = math::Interval(std::fmin(min.y, max.y), std::fmax(min.y, max.y));
     m_z_bounds = math::Interval(std::fmin(min.z, max.z), std::fmax(min.z, max.z));
+    pad_to_minimums();
 }
 
 AABB::AABB(const AABB& box0, const AABB& box1) {
     m_x_bounds = math::Interval(box0.m_x_bounds, box1.m_x_bounds);
     m_y_bounds = math::Interval(box0.m_y_bounds, box1.m_y_bounds);
     m_z_bounds = math::Interval(box0.m_z_bounds, box1.m_z_bounds);
+    pad_to_minimums();
 }
 
 const math::Interval& AABB::axis_interval(i32 n) const {
@@ -61,4 +65,11 @@ i32 AABB::longest_axis() const {
     } else {
         return m_y_bounds.size() > m_z_bounds.size() ? 1 : 2;
     }
+}
+
+void AABB::pad_to_minimums() {
+    f64 eps = 0.0001;
+    if (m_x_bounds.size() < eps) m_x_bounds = m_x_bounds.expand(eps);
+    if (m_y_bounds.size() < eps) m_y_bounds = m_y_bounds.expand(eps);
+    if (m_z_bounds.size() < eps) m_z_bounds = m_z_bounds.expand(eps);
 }

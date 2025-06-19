@@ -21,6 +21,9 @@ public:
 
     bool hit(const ray& r, math::Interval ray_t) const;
     i32 longest_axis() const;
+
+private:
+    void pad_to_minimums();
 };
 
 inline const AABB AABB::empty = AABB(math::Interval::empty, math::Interval::empty, math::Interval::empty);

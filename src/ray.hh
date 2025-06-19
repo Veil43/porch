@@ -1,6 +1,7 @@
 #ifndef RAY_HH
 #define RAY_HH
 
+
 #include "vec3.hh"
 #include "types.hh"
 
