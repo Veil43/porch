@@ -17,47 +17,40 @@ AABB::AABB(const AABB& box0, const AABB& box1) {
     m_z_bounds = math::Interval(box0.m_z_bounds, box1.m_z_bounds);
 }
 
+const math::Interval& AABB::axis_interval(i32 n) const {
+    if (n == 1) return m_y_bounds;
+    if (n == 2) return m_z_bounds;
+    return m_x_bounds;
+}
 
 bool AABB::hit(const ray& r, math::Interval ray_t) const {
     const point3& ray_origin = r.origin();
     const vec3& ray_direction = r.direction();
-    f64 tmin = ray_t.m_min;
-    f64 tmax = ray_t.m_max;
     
-    // tn = (xn - Ox)/Dx
-    /// NOTE: should add a small value eps to the numerator to avoid NaN?
-    // ---------------------------------
-    // x interval bounds
-    // ---------------------------------
-    f64 tx0 = (m_x_bounds.m_min - ray_origin.x) / ray_direction.x;
-    f64 tx1 = (m_x_bounds.m_max - ray_origin.x) / ray_direction.x;
-    if (tx0 > tx1) std::swap(tx0, tx1);
+    /*
+        axis = 0 gives interval m_x_bounds
+        axis = 1 gives interval m_y_bounds
+        axis = 2 gives interval m_z_bounds
+    */
 
-    tmin = std::max(tx0, tmin);
-    tmax = std::min(tx1, tmax);
-    if (tmax <= tmin) return false;
+    for (i32 axis = 0; axis < 3; axis++) {
+        const math::Interval& axis_bounds = axis_interval(axis);
+        const f64&            axis_dir_inv = 1.0/ray_direction[axis];
 
-    // ---------------------------------
-    // y interval bounds
-    // ---------------------------------
-    f64 ty0 = (m_y_bounds.m_min - ray_origin.y) / ray_direction.y;
-    f64 ty1 = (m_y_bounds.m_max - ray_origin.y) / ray_direction.y;
-    if (ty0 > ty1) std::swap(ty0, ty1);
+        f64 t0 = (axis_bounds.m_min - ray_origin[axis]) * axis_dir_inv;
+        f64 t1 = (axis_bounds.m_max - ray_origin[axis]) * axis_dir_inv;
 
-    tmin = std::max(tx0, tmin);
-    tmax = std::min(tx1, tmax);
-    if (tmax <= tmin) return false;
+        if (t0 > t1) {
+            std::swap(t0, t1);
+        }
 
-    // ---------------------------------
-    // z interval bounds
-    // ---------------------------------
-    f64 tz0 = (m_z_bounds.m_min - ray_origin.z) / ray_direction.z;
-    f64 tz1 = (m_z_bounds.m_max - ray_origin.z) / ray_direction.z;
-    if (tz0 > tz1) std::swap(tz0, tz1);
-    
-    tmin = std::max(tx0, tmin);
-    tmax = std::min(tx1, tmax);   
-    if (tmax <= tmin) return false;
+        if (t0 > ray_t.m_min) ray_t.m_min = t0;
+        if (t1 < ray_t.m_max) ray_t.m_max = t1;
+
+        if (ray_t.m_max <= ray_t.m_min) {
+            return false;
+        }
+    }
 
     return true; // we overlapped
 }

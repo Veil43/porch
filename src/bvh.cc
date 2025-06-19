@@ -18,12 +18,12 @@ BVHNode::BVHNode(std::vector<shared_ptr<Hittable>>& objects, size_t start, size_
                     : (axis == 1) ? box_y_compare
                                   : box_z_compare;
     
-    size_t object_span = end - start;
+    size_t object_count = end - start;
 
-    if (object_span == 1) {
+    if (object_count == 1) {
         // If we are left with one object we duplicate it.
         m_left = m_right = objects[start];
-    } else if (object_span == 2) {
+    } else if (object_count == 2) {
         // If we are left with two object we split them
         m_left = objects[start];
         m_right = objects[start+1];
@@ -31,7 +31,7 @@ BVHNode::BVHNode(std::vector<shared_ptr<Hittable>>& objects, size_t start, size_
         std::sort(std::begin(objects) + start, std::begin(objects) + end, comparator);
         
         // If we have more objects we split them into two groups
-        size_t mid = start + object_span/2;
+        size_t mid = start + object_count/2;
         m_left = make_shared<BVHNode>(objects, start, mid);
         m_right = make_shared<BVHNode>(objects, mid, end);
     }

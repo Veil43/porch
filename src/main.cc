@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     #define _CRT_MAP_ALLOC
@@ -10,13 +11,15 @@
 #include "camera.hh"
 #include "material.hh"
 #include "sphere.hh" 
+#include "bvh.hh"
 
 struct Scene {
+    std::string name;
     HittableList hittables;
     Camera camera;
 };
 
-Scene get_world(i32 resolution, i32 spp, i32 max_bounces) {
+Scene sample_scene(i32 width, i32 spp, i32 max_bounces, const std::string& name = "3 Sphere default scene") {
     auto left = point3(-1.0, 0.0, -1.0);
 	auto center = point3(0.0, 0.0, -1.2);
 	auto right = point3(1.0, 0.0, -1.0);
@@ -49,7 +52,7 @@ Scene get_world(i32 resolution, i32 spp, i32 max_bounces) {
 
 	Camera main_camera;
 
-	main_camera.m_image_width = resolution;
+	main_camera.m_image_width = width;
 	main_camera.m_image_aspect_ratio = 16.0 / 9.0;
 	main_camera.m_samples_per_pixel = spp;
 	main_camera.m_max_bounces = max_bounces;
@@ -61,10 +64,15 @@ Scene get_world(i32 resolution, i32 spp, i32 max_bounces) {
 	main_camera.m_world_up = vec3(0, 1, 0);
 	main_camera.m_background = color(0.70, 0.80, 1.00);
 
-	return Scene{world, main_camera};
+    Scene output_scene = {};
+    output_scene.name = name;
+    output_scene.hittables = world;
+    output_scene.camera = main_camera;
+
+	return output_scene;
 }
 
-Scene rtweekend1(i32 resolution = 1200, i32 spp = 500, i32 max_bounces = 50) {
+Scene rtweekend1(i32 width, i32 spp, i32 max_bounces, const std::string& name = "rtweekend 1 final scene") {
     HittableList world;
 
     auto checker = std::make_shared<CheckerTexture>(0.32, color(0.2), color(0.9));
@@ -111,7 +119,7 @@ Scene rtweekend1(i32 resolution = 1200, i32 spp = 500, i32 max_bounces = 50) {
     Camera main_camera;
 
     main_camera.m_image_aspect_ratio       = 16.0 / 9.0;
-    main_camera.m_image_width              = resolution;
+    main_camera.m_image_width              = width;
     main_camera.m_samples_per_pixel        = spp;
     main_camera.m_max_bounces              = max_bounces;
 
@@ -123,14 +131,32 @@ Scene rtweekend1(i32 resolution = 1200, i32 spp = 500, i32 max_bounces = 50) {
     main_camera.m_defocus_angle        = 0.6;
     main_camera.m_focus_distance       = 10.0;
 
-    return Scene{world, main_camera};
+    Scene output_scene = {};
+    output_scene.name = name;
+    output_scene.hittables = world;
+    output_scene.camera = main_camera;
+
+	return output_scene;
 }
 
 
 class Renderer {
 public:
-    utils::Image render_image(Scene scene, const std::string& name) {
-        utils::Image output_image = scene.camera.render(scene.hittables);
+    utils::Image render_image(Scene scene, const std::string& name, bool bvh = false) {
+        auto start = std::chrono::high_resolution_clock::now();
+        
+        utils::Image output_image = {};
+        if (bvh) {
+            auto bvh_hittables = HittableList(make_shared<BVHNode>(scene.hittables));
+            output_image = scene.camera.render(bvh_hittables);
+        } else {
+            output_image = scene.camera.render(scene.hittables);
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "Rendering took: " << elapsed.count() / 1000.0f << " seconds\n";
+
         output_image.name = name;
         return output_image;
     }
@@ -140,10 +166,10 @@ int main(int argc, char** argv) {
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif 
-    auto scene = get_world(250, 10, 10);
+    auto scene = sample_scene(800, 100, 50, "Sample_Scene.w800s100b50");
     
     Renderer porch = {};
-    auto image = porch.render_image(scene, "test-image");
+    auto image = porch.render_image(scene, scene.name, true);
     utils::write_image_to_file(image, "../out/", utils::eImageFormat::kPNG);
 
     return 0;
