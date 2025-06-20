@@ -30,7 +30,7 @@ private:
     vec3 m_defocus_disk_u, m_defocus_disk_v;
 
     void initialize();
-    color compute_ray_color(const ray& r, const Hittable& scene) const;
+    color compute_ray_color(const ray& r, i32 depth, const Hittable& scene) const;
     ray generate_random_ray_for_pixel(i32 x, i32 y) const;
     /*
         returns a point in the unit square x: [-0.5,0.5], y: [-0.5,0.5]

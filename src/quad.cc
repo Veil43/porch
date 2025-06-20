@@ -30,9 +30,6 @@ bool Quad::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
 
     f64 norm_dot_dir = dot(m_normal, r.direction());
     if (std::fabs(norm_dot_dir) < 1e-8) {
-#ifdef PORCH_DEBUG
-        parallel_to_plane++;
-#endif
         return false;
     }
 
@@ -41,9 +38,6 @@ bool Quad::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
     // -------------------------
     f64 t = (m_plane_d - dot(m_normal, r.origin())) / norm_dot_dir;
     if (!ray_t.in_excl(t)) {
-#ifdef PORCH_DEBUG
-        too_close_to_plane++;
-#endif
         return false;
     }
 
@@ -56,9 +50,6 @@ bool Quad::hit(const ray& r, math::Interval ray_t, HitRecord& record) const {
     f64 b = dot(m_w_vector, cross(m_u_vector, planar_hit_point_vector));
 
     if (!is_interior(a, b, record)) {
-#ifdef PORCH_DEBUG
-        outside_quad++;
-#endif
         return false;
     }
 

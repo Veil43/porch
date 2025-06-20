@@ -13,6 +13,7 @@
 #include "sphere.hh" 
 #include "bvh.hh"
 #include "quad.hh"
+#include "texture.hh"
 
 struct Scene {
     std::string name;
@@ -51,24 +52,24 @@ Scene sample_scene(i32 width, i32 spp, i32 max_bounces, const std::string& name 
     world.add(default_right_sphere);
 	world.add(default_left_bubble);
 
-	Camera main_camera;
+	Camera cam;
 
-	main_camera.m_image_width = width;
-	main_camera.m_image_aspect_ratio = 16.0 / 9.0;
-	main_camera.m_samples_per_pixel = spp;
-	main_camera.m_max_bounces = max_bounces;
-	main_camera.m_vfov = 90;
-	main_camera.m_defocus_angle = 0.0;
-	main_camera.m_focus_distance = 3.4;
-	main_camera.m_position = point3(0.0);
-	main_camera.m_target = point3(0.0,0.0,-1.0);
-	main_camera.m_world_up = vec3(0, 1, 0);
-	main_camera.m_background = color(0.70, 0.80, 1.00);
+	cam.m_image_width = width;
+	cam.m_image_aspect_ratio = 16.0 / 9.0;
+	cam.m_samples_per_pixel = spp;
+	cam.m_max_bounces = max_bounces;
+	cam.m_vfov = 90;
+	cam.m_defocus_angle = 0.0;
+	cam.m_focus_distance = 3.4;
+	cam.m_position = point3(0.0);
+	cam.m_target = point3(0.0,0.0,-1.0);
+	cam.m_world_up = vec3(0, 1, 0);
+	cam.m_background = color(0.7, 0.8, 1.0);
 
     Scene output_scene = {};
     output_scene.name = name;
     output_scene.hittables = world;
-    output_scene.camera = main_camera;
+    output_scene.camera = cam;
 
 	return output_scene;
 }
@@ -117,25 +118,27 @@ Scene rtweekend1(i32 width, i32 spp, i32 max_bounces, const std::string& name = 
     auto material3 = make_shared<Metal>(color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<Sphere>(point3(4, 1, 0), 1.0, material3));
 
-    Camera main_camera;
+    Camera cam;
 
-    main_camera.m_image_aspect_ratio       = 16.0 / 9.0;
-    main_camera.m_image_width              = width;
-    main_camera.m_samples_per_pixel        = spp;
-    main_camera.m_max_bounces              = max_bounces;
+    cam.m_image_aspect_ratio       = 16.0 / 9.0;
+    cam.m_image_width              = width;
+    cam.m_samples_per_pixel        = spp;
+    cam.m_max_bounces              = max_bounces;
 
-    main_camera.m_vfov                 = 20;
-    main_camera.m_position                  = point3(13,2,3);
-    main_camera.m_target               = point3(0,0,0);
-    main_camera.m_world_up             = vec3(0,1,0);
+    cam.m_vfov                 = 20;
+    cam.m_position                  = point3(13,2,3);
+    cam.m_target               = point3(0,0,0);
+    cam.m_world_up             = vec3(0,1,0);
 
-    main_camera.m_defocus_angle        = 0.6;
-    main_camera.m_focus_distance       = 10.0;
+    cam.m_defocus_angle        = 0.6;
+    cam.m_focus_distance       = 10.0;
+
+    cam.m_background = color(0.5, 0.7, 1.0);
 
     Scene output_scene = {};
     output_scene.name = name;
     output_scene.hittables = world;
-    output_scene.camera = main_camera;
+    output_scene.camera = cam;
 
 	return output_scene;
 }
@@ -170,10 +173,46 @@ Scene quads(i32 width, i32 spp, i32 max_bounces, const std::string& name = "quad
     cam.m_world_up = vec3(0,1,0);
 
     cam.m_defocus_angle  = 0;
-    // cam.m_focus_distance = 10.0;
-    
+
+    cam.m_background = color(1.0, 0.7 , 0.5);
+
     Scene output_scene = {};
 
+    output_scene.name = name;
+    output_scene.camera = cam;
+    output_scene.hittables = world;
+
+    return output_scene;
+}
+
+Scene simple_light(i32 width, i32 spp, i32 max_bounces, const std::string& name = "simple_light") {
+    HittableList world;
+
+    auto ground_tex = std::make_shared<SolidColor>(0.7, 0.4, 0.3);
+
+    world.add(make_shared<Sphere>(point3(0,-1000,0), 1000, std::make_shared<Lambertian>(ground_tex)));
+    world.add(make_shared<Sphere>(point3(0,2,0), 2, std::make_shared<Lambertian>(color(1.0))));
+    
+    auto difflight = std::make_shared<DiffuseLight>(color(4,4,4));
+    world.add(std::make_shared<Sphere>(point3(0,7,0), 2, difflight));
+    world.add(std::make_shared<Quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
+
+    Camera cam;
+
+    cam.m_image_aspect_ratio    = 16.0 / 9.0;
+    cam.m_image_width           = width;
+    cam.m_samples_per_pixel     = spp;
+    cam.m_max_bounces           = max_bounces;
+    cam.m_background            = color(0,0,0);
+
+    cam.m_vfov     = 20;
+    cam.m_position = point3(26,3,6);
+    cam.m_target   = point3(0,2,0);
+    cam.m_world_up      = vec3(0,1,0);
+
+    cam.m_defocus_angle = 0;
+
+    Scene output_scene;
     output_scene.name = name;
     output_scene.camera = cam;
     output_scene.hittables = world;
@@ -207,16 +246,11 @@ int main(int argc, char** argv) {
 #if defined(PORCH_DEBUG) && defined(_MSC_VER)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif 
-    Scene scene = quads(800, 100, 50, "quads.w800s100b50");
+    Scene scene = simple_light(800, 200, 50, "simple_light.w800s200b50");
 
     Renderer porch = {};
     auto image = porch.render_image(scene, scene.name, true);
     utils::write_image_to_file(image, "../out/", utils::eImageFormat::kPNG);
 
-#ifdef PORCH_DEBUG
-    std::cout << "Rays parallel: " << parallel_to_plane << "\n";
-    std::cout << "Rays too close: " << too_close_to_plane << "\n";
-    std::cout << "Rays outside quad: " << outside_quad << "\n";
-#endif
     return 0;
 }

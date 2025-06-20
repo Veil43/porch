@@ -64,7 +64,7 @@ utils::Image Camera::render(const Hittable& scene) {
             color pixel_color(0.0,0.0,0.0);
             for (i32 sample = 0; sample < m_samples_per_pixel; sample++) {
                 ray r = generate_random_ray_for_pixel(x, y);
-                pixel_color += compute_ray_color(r, scene);
+                pixel_color += compute_ray_color(r, m_max_bounces, scene);
             }
 
             write_color_to_buffer(buffer, index, pixel_color * color_contribution_per_sample);
@@ -74,35 +74,30 @@ utils::Image Camera::render(const Hittable& scene) {
     return output_image;
 }
 
-color Camera::compute_ray_color(const ray& r, const Hittable& scene) const {
+color Camera::compute_ray_color(const ray& r, i32 depth, const Hittable& scene) const {
     using math::Interval;
 
-    color output_color = color(1.0);
-
-    ray current_ray = r;
-    for (int i = 0; i < m_max_bounces; i++) {
-        HitRecord record;
-        bool hit_success = scene.hit(current_ray, Interval(0.001, math::infinity), record);
-        if (hit_success) {
-            color attenuation;
-            ray scattered_ray;
-            if (record.material->scatter(current_ray, record, attenuation, scattered_ray)) {
-                output_color = output_color * attenuation;
-                current_ray = scattered_ray;
-            } else {
-                // we couldn't scatter
-                break;
-            }
-
-        } else {
-            vec3 unit_ray_direction = normalize(current_ray.direction());
-            auto t = 0.5 * (unit_ray_direction.y + 1.0);
-            color sky = math::lerp(color(1.0, 1.0, 1.0), color(0.5, 0.7, 0.9), t);
-            return linear_to_gamma(output_color * sky);
-        }
+    if (depth <= 0) {
+        return color(0.0);
     }
-    
-    return color(0.0);
+
+    HitRecord record;
+
+    if (!scene.hit(r, Interval(0.001, math::infinity), record)) {
+        return m_background;
+    }
+
+    ray scattered_ray;
+    color attenuation;
+    color color_from_emission = record.material->emitted(record.u, record.v, record.p);
+
+    if (!record.material->scatter(r, record, attenuation, scattered_ray)) {
+        return color_from_emission;
+    }
+
+    color color_from_scatter = attenuation * compute_ray_color(scattered_ray, depth-1, scene);
+
+    return color_from_emission + color_from_scatter;
 }
 
 ray Camera::generate_random_ray_for_pixel(i32 x, i32 y) const {

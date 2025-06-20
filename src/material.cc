@@ -77,3 +77,15 @@ bool Dielectric::scatter  (
     scattered = ray(record.p, out_direction);
     return true;
 }
+
+DiffuseLight::DiffuseLight(std::shared_ptr<Texture> tex)
+    : m_texture{tex} 
+{}
+
+DiffuseLight::DiffuseLight(const color& emission_color) 
+    : m_texture{std::make_shared<SolidColor>(emission_color)}
+{}
+
+color DiffuseLight::emitted(f64 u, f64 v, const point3& p) const {
+    return m_texture->value(u, v, p);
+}

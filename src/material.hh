@@ -16,6 +16,9 @@ public:
     ) const {
         return false;
     }
+    virtual color emitted(f64 u, f64 v, const point3& p) const {
+        return color(0.);
+    }
 };
 
 class Lambertian : public Material {
@@ -60,4 +63,14 @@ private:
     /// NOTE: this is the refractive index in the air OR the ratio relative to the
     /// enclosing media. It is stored as a ratio an assume IR/1.0 (for air)
     f64 m_index_of_refraction;
+};
+
+class DiffuseLight : public Material {
+public:
+    DiffuseLight(std::shared_ptr<Texture> tex);
+    DiffuseLight(const color& emission_color);
+
+    color emitted(f64 u, f64 v, const point3& p) const override;
+private:
+    std::shared_ptr<Texture> m_texture;
 };
